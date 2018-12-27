@@ -43,8 +43,40 @@ async def on_command_error(error, ctx):
 
 
 @client.command(pass_context=True)
+async def status(ctx):
+    user_roles = await get_user_roles(ctx.message.author)
+    if any([role in user_roles for role in ('Alive', 'Dead')]):
+        if 'Professional' in user_roles:
+            rank = 'Professional'
+            color = 0xf04c4c
+        elif 'Veteran' in user_roles:
+            rank = 'Veteran'
+            color = 0xd1810d
+        elif 'Survivor' in user_roles:
+            rank = 'Survivor'
+            color = 0xf0ca12
+        else:
+            rank = 'None'
+            color = 0xffffff
+
+        # Temporary fake values
+        xp = 59
+        xp_total = 107
+        health = 'Normal'
+        energy = 10
+
+        embed = discord.Embed(title=ctx.message.author.display_name, color=color)
+        embed.set_thumbnail(url=ctx.message.author.avatar_url)
+        embed.add_field(name='Rank', value=rank, inline=True)
+        embed.add_field(name='XP', value='{0} ({1} total)'.format(xp, xp_total), inline=True)
+        embed.add_field(name='Health', value=health, inline=True)
+        embed.add_field(name='Energy', value='{0}/10'.format(energy), inline=True)
+        await client.say(embed=embed)
+
+
+@client.command(pass_context=True)
 async def say(ctx, *, msg):
-    if await user_has_role(ctx.message.author, 'Moderator'):
+    if 'Moderator' in await get_user_roles(ctx.message.author):
         await client.say(msg)
 
 
@@ -96,14 +128,6 @@ async def generate_status_message():
             status = '**Camp Status**```{0}```**Warehouse**```{1}```'.format(status_table, warehouse_table)
             await client.edit_message(message, status)
             break
-
-
-async def user_has_role(user, *args):
-    """
-    Takes in a User object and any amount of role names.
-    Checks if the user has any of the roles listed.
-    """
-    return any([role in await get_user_roles(user) for role in args])
 
 
 async def get_user_roles(user):
