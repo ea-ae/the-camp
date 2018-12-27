@@ -9,11 +9,14 @@ from config import TOKEN
 SERVER_ID = '527261834852696064'
 
 client = discord.Client()
+
 channels = {}
+server = None
 
 
 @client.event
 async def on_ready():
+    global server
     server = client.get_server(SERVER_ID)
     for channel in server.channels:
         channels[channel.name] = client.get_channel(channel.id)
@@ -26,12 +29,29 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    asyncio.ensure_future(generate_status_message())
+    asyncio.ensure_future(generate_status_message())  # Temporary
+
     if message.content.startswith('!'):
         parts = message.content[1:].split()
+
+        user_roles = [role.name for role in server.get_member(message.author.id).roles]
+        authorized = any([role in user_roles for role in ('Survivor', 'Veteran', 'Professional')])
         if parts[0] == 'say':
-            if 'Moderator' in [role.name for role in message.author.roles]:
+            if 'Moderator' in user_roles:
                 await client.send_message(message.channel, ' '.join(parts[1:]))
+        elif parts[0] == 'join' and len(parts) == 1:
+            if authorized:
+                await client.send_message(message.channel, 'You have already joined the camp!')
+            else:
+                await client.send_message(message.channel, 'You have joined the camp!')
+
+
+@client.event
+async def on_member_join(member):
+    msg = ("""Welcome to **The Camp**, {0}!
+All commands related to the game are sent in private messages.
+To join the camp, simply type `!join`.""").format(member.mention)
+    await client.send_message(member, msg)
 
 
 async def generate_status_message():
@@ -43,8 +63,8 @@ async def generate_status_message():
     scrap = 9487
 
     days = 0
-    temperature = -32
-    defense = 5423
+    temperature = -33
+    defense = 5411
 
     status_table = prettytable.PrettyTable(['Name', 'Value'])
     status_table.align = 'r'
@@ -62,7 +82,7 @@ async def generate_status_message():
 
     async for message in client.logs_from(channels['camp-status']):
         if message.author == client.user:
-            status = '**Camp Status**```' + str(status_table) + '```**Warehouse**```' + str(warehouse_table) + '```'
+            status = '**Camp Status**```{0}```**Warehouse**```{1}```'.format(status_table, warehouse_table)
             await client.edit_message(message, status)
             break
 
