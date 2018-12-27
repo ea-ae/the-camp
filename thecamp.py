@@ -39,7 +39,7 @@ To join the camp, simply type `!join`.""").format(member.mention)
 @client.event
 async def on_command_error(error, ctx):
     if isinstance(error, commands.CommandNotFound):
-        await client.say('Unknown command. Type `!help` for a list of commands.')
+        await client.send_message(ctx.message.channel, 'Unknown command. Type `!help` for a list of commands.')
 
 
 @client.command(pass_context=True)
