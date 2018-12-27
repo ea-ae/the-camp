@@ -28,9 +28,9 @@ async def on_ready():
 
 @client.event
 async def on_member_join(member):
-    msg = ("""Welcome to **The Camp**, {0}!
-All commands related to the game are sent in private messages.
-To join the camp, simply type `!join`.""").format(member.mention)
+    msg = (f'Welcome to **The Camp**, {member.mention}!'
+           f'All commands related to the game are sent in private messages.'
+           f'To join the camp, simply type `!join`.')
     await client.send_message(member, msg)
 
 
@@ -66,9 +66,9 @@ async def status(ctx):
         embed = discord.Embed(title=ctx.message.author.display_name, color=color)
         embed.set_thumbnail(url=ctx.message.author.avatar_url)
         embed.add_field(name='Rank', value=rank)
-        embed.add_field(name='XP', value='{0} ({1} total)'.format(xp, xp_total))
+        embed.add_field(name='XP', value=f'{xp} ({xp_total} total)')
         embed.add_field(name='Health', value=health)
-        embed.add_field(name='Energy', value='{0}/10'.format(energy))
+        embed.add_field(name='Energy', value=f'{energy}/10')
         await client.say(embed=embed)
 
 
@@ -144,8 +144,8 @@ async def generate_status_message():
     status_embed = discord.Embed(color=0x128f39)
     status_embed.add_field(name='Population', value=population, inline=False)
     status_embed.add_field(name='Time Survived',
-                           value='{0} days and {1} hours'.format(int(hours / 24), hours % 24), inline=False)
-    status_embed.add_field(name='Temperature', value='{0}°C'.format(temperature), inline=False)
+                           value=f'{int(hours / 24)} days and {hours % 24} hours', inline=False)
+    status_embed.add_field(name='Temperature', value=f'{temperature}°C', inline=False)
     status_embed.add_field(name='Defense Points', value=defense, inline=False)
 
     warehouse_embed = discord.Embed(color=0xe59b16)
