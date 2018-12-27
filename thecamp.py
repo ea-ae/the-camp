@@ -2,8 +2,6 @@ import asyncio
 import discord
 from discord.ext import commands
 
-import prettytable
-
 from config import TOKEN, SERVER_ID
 
 
@@ -82,6 +80,7 @@ async def say(ctx, *, msg):
 
 @client.command()
 async def help():
+    await generate_status_message()  # TEMP
     await client.say('I don\'t need any help from you right now, but thanks for asking.')
 
 
@@ -99,35 +98,39 @@ async def join(ctx):
 
 async def generate_status_message():
     # Temporary fake data
-    food = 725
-    fuel = 205
-    medicine = 53
-    materials = 2509
-    scrap = 9487
-
-    days = 0
+    population = 100
+    hours = 60
     temperature = -33
     defense = 5411
 
-    status_table = prettytable.PrettyTable(['Name', 'Value'])
-    status_table.align = 'r'
-    status_table.add_row(['Days survived', days])
-    status_table.add_row(['Temperature', str(temperature) + '°C'])
-    status_table.add_row(['Defense points', '{:,}'.format(defense)])
+    food = 725
+    fuel = 205
+    medicine = 60
+    materials = 2509
+    scrap = 9487
 
-    warehouse_table = prettytable.PrettyTable(['Resource', 'Amount'])
-    warehouse_table.align = 'r'
-    warehouse_table.add_row(['Food', '{:,}'.format(food)])
-    warehouse_table.add_row(['Fuel', '{:,}'.format(fuel)])
-    warehouse_table.add_row(['Medicine', '{:,}'.format(medicine)])
-    warehouse_table.add_row(['Materials', '{:,}'.format(materials)])
-    warehouse_table.add_row(['Scrap', '{:,}'.format(scrap)])
+    status_embed = discord.Embed(color=0x128f39)
+    status_embed.add_field(name='Population', value=population, inline=False)
+    status_embed.add_field(name='Time Survived',
+                           value='{0} days and {1} hours'.format(int(hours / 24), hours % 24), inline=False)
+    status_embed.add_field(name='Temperature', value='{0}°C'.format(temperature), inline=False)
+    status_embed.add_field(name='Defense Points', value=defense, inline=False)
 
+    warehouse_embed = discord.Embed(color=0xe59b16)
+    warehouse_embed.add_field(name='Food', value=food, inline=False)
+    warehouse_embed.add_field(name='Fuel', value=fuel, inline=False)
+    warehouse_embed.add_field(name='Medicine', value=medicine, inline=False)
+    warehouse_embed.add_field(name='Materials', value=materials, inline=False)
+    warehouse_embed.add_field(name='Scrap', value=scrap, inline=False)
+
+    i = 0
     async for message in client.logs_from(channels['camp-status']):
         if message.author == client.user:
-            status = '**Camp Status**```{0}```**Warehouse**```{1}```'.format(status_table, warehouse_table)
-            await client.edit_message(message, status)
-            break
+            if i == 0:
+                await client.edit_message(message, new_content='**Warehouse**', embed=warehouse_embed)
+            elif i == 1:
+                await client.edit_message(message, new_content='**Camp Status**', embed=status_embed)
+            i += 1
 
 
 async def get_user_roles(user):
