@@ -65,10 +65,42 @@ async def status(ctx):
 
         embed = discord.Embed(title=ctx.message.author.display_name, color=color)
         embed.set_thumbnail(url=ctx.message.author.avatar_url)
-        embed.add_field(name='Rank', value=rank, inline=True)
-        embed.add_field(name='XP', value='{0} ({1} total)'.format(xp, xp_total), inline=True)
-        embed.add_field(name='Health', value=health, inline=True)
-        embed.add_field(name='Energy', value='{0}/10'.format(energy), inline=True)
+        embed.add_field(name='Rank', value=rank)
+        embed.add_field(name='XP', value='{0} ({1} total)'.format(xp, xp_total))
+        embed.add_field(name='Health', value=health)
+        embed.add_field(name='Energy', value='{0}/10'.format(energy))
+        await client.say(embed=embed)
+
+
+@client.command(pass_context=True, aliases=['house', 'inventory'])
+async def home(ctx):
+    user_roles = await get_user_roles(ctx.message.author)
+    if any([role in user_roles for role in ('Alive', 'Dead')]):
+        if 'Professional' in user_roles:
+            color = 0xf04c4c
+        elif 'Veteran' in user_roles:
+            color = 0xd1810d
+        elif 'Survivor' in user_roles:
+            color = 0xf0ca12
+        else:
+            color = 0xffffff
+
+        # Temporary fake values
+        food = 17
+        fuel = 5
+        medicine = 0
+        materials = 36
+        scrap = 107
+
+        embed = discord.Embed(title='Your House',
+                              description='View possible house upgrades by typing `!build`.',
+                              color=color)
+        embed.set_author(name=ctx.message.author.display_name)
+        embed.add_field(name='Food', value=food)
+        embed.add_field(name='Fuel', value=fuel)
+        embed.add_field(name='Medicine', value=medicine)
+        embed.add_field(name='Materials', value=materials)
+        embed.add_field(name='Scrap', value=scrap)
         await client.say(embed=embed)
 
 
