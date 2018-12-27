@@ -1,5 +1,7 @@
-import discord
 import asyncio
+import discord
+from discord.ext import commands
+
 import prettytable
 
 from config import TOKEN
@@ -8,7 +10,8 @@ from config import TOKEN
 # Settings
 SERVER_ID = '527261834852696064'
 
-client = discord.Client()
+client = commands.Bot(command_prefix='!')
+client.remove_command('help')
 
 channels = {}
 server = None
@@ -28,30 +31,28 @@ async def on_ready():
 
 
 @client.event
-async def on_message(message):
-    asyncio.ensure_future(generate_status_message())  # Temporary
-
-    if message.content.startswith('!'):
-        parts = message.content[1:].split()
-
-        user_roles = [role.name for role in server.get_member(message.author.id).roles]
-        authorized = any([role in user_roles for role in ('Survivor', 'Veteran', 'Professional')])
-        if parts[0] == 'say':
-            if 'Moderator' in user_roles:
-                await client.send_message(message.channel, ' '.join(parts[1:]))
-        elif parts[0] == 'join' and len(parts) == 1:
-            if authorized:
-                await client.send_message(message.channel, 'You have already joined the camp!')
-            else:
-                await client.send_message(message.channel, 'You have joined the camp!')
-
-
-@client.event
 async def on_member_join(member):
     msg = ("""Welcome to **The Camp**, {0}!
 All commands related to the game are sent in private messages.
 To join the camp, simply type `!join`.""").format(member.mention)
     await client.send_message(member, msg)
+
+
+@client.event
+async def on_command_error(error, ctx):
+    if isinstance(error, commands.CommandNotFound):
+        pass
+
+
+@client.command()
+@commands.has_any_role('Moderator')  # This only works if the command is invoked in the server!
+async def say(*, msg):
+    await client.say(msg)
+
+
+@client.command()
+async def help():
+    await client.say('I don\'t need any help from you right now, but thanks for asking.')
 
 
 async def generate_status_message():
@@ -86,4 +87,5 @@ async def generate_status_message():
             await client.edit_message(message, status)
             break
 
+# Run the bot
 client.run(TOKEN)
