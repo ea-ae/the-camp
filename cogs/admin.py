@@ -22,6 +22,19 @@ class Admin:
         raise KeyboardInterrupt
 
     @commands.command(pass_context=True)
+    async def reload(self, ctx, extension):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
+
+        try:
+            self.client.unload_extension(f'cogs.{extension}')
+            self.client.load_extension(f'cogs.{extension}')
+            print(f'Reloaded extension: {extension}')
+        except Exception as e:
+            print(f'Failed to reload extension "{extension}":\n{type(e).__name__}\n{e}')
+
+    @commands.command(pass_context=True)
     async def load(self, ctx, extension):
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
