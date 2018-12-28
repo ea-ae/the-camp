@@ -26,5 +26,6 @@ class Ranks:
                                   'tutorial channel first. To see a list of available commands, type `!help`.')
 
 
+
 def setup(client):
     client.add_cog(Ranks(client))

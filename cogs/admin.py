@@ -13,6 +13,15 @@ class Admin:
         self.client = client
 
     @commands.command(pass_context=True)
+    async def shutdown(self, ctx):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
+
+        print('Server stopped by command.')
+        raise KeyboardInterrupt
+
+    @commands.command(pass_context=True)
     async def load(self, ctx, extension):
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
