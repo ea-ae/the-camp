@@ -22,9 +22,39 @@ class Ranks:
             await self.client.say('You have already joined this game. Since you are dead, you have to wait till '
                                   'someone revives you or the next game starts.')
         else:
-            await self.client.say('Welcome to **The Camp**! If it is your first time here, be sure to read the '
-                                  'tutorial channel first. To see a list of available commands, type `!help`.')
+            async with self.client.db.acquire() as conn:
+                tr = conn.transaction()
+                await tr.start()
+                try:
+                    query = '''SELECT EXISTS(SELECT 1 FROM players WHERE user_id = $1);'''
+                    result = await self.client.db.fetchval(query, ctx.message.author.id)
 
+                    if result:
+                        await self.client.say(
+                            'Welcome back to **The Camp**!\n'
+                            'Remember to spend the XP gained from your previous game using `!upgrade`.\n'
+                            'To see a list of available commands, type `!help`.')
+                        pass  # TODO: Set row back to default values
+                    else:
+                        print('No result tonight!')
+                        query = '''INSERT INTO players (user_id, status) VALUES ($1, 'normal')'''
+                        await self.client.db.execute(query, ctx.message.author.id)
+
+                        await self.client.say(
+                            'Welcome to **The Camp**!\n'
+                            'Since it is your first time here, I\'d recommend reading the tutorial.\n'
+                            'To see a list of available commands, type `!help`.')
+                except Exception as e:
+                    await tr.rollback()
+                    await self.client.say('Something went wrong!')
+                    print(e)
+                else:
+                    await tr.commit()
+
+                    alive_role = discord.utils.get(self.client.server.roles, name='Alive')
+                    survivor_role = discord.utils.get(self.client.server.roles, name='Survivor')  # TODO: XP-based role
+                    member = self.client.server.get_member(ctx.message.author.id)
+                    await self.client.add_roles(member, alive_role, survivor_role)
 
 
 def setup(client):
