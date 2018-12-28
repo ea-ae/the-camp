@@ -27,7 +27,7 @@ class Ranks:
                 await tr.start()
                 try:
                     query = '''SELECT EXISTS(SELECT 1 FROM players WHERE user_id = $1);'''
-                    result = await self.client.db.fetchval(query, ctx.message.author.id)
+                    result = await conn.fetchval(query, ctx.message.author.id)
 
                     if result:
                         await self.client.say(
@@ -36,9 +36,8 @@ class Ranks:
                             'To see a list of available commands, type `!help`.')
                         pass  # TODO: Set row back to default values
                     else:
-                        print('No result tonight!')
                         query = '''INSERT INTO players (user_id, status) VALUES ($1, 'normal')'''
-                        await self.client.db.execute(query, ctx.message.author.id)
+                        await conn.execute(query, ctx.message.author.id)
 
                         await self.client.say(
                             'Welcome to **The Camp**!\n'

@@ -29,19 +29,21 @@ class Player:
                 rank = 'None'
                 color = 0xffffff
 
-            # Temporary fake values
-            xp = 59
-            xp_total = 107
-            health = 'Normal'
-            energy = 10
-
-            embed = discord.Embed(title=ctx.message.author.display_name, color=color)
-            embed.set_thumbnail(url=ctx.message.author.avatar_url)
-            embed.add_field(name='Rank', value=rank)
-            embed.add_field(name='XP', value=f'{xp} ({xp_total} total)')
-            embed.add_field(name='Health', value=health)
-            embed.add_field(name='Energy', value=f'{energy}/10')
-            await self.client.say(embed=embed)
+            async with self.client.db.acquire() as conn:
+                try:
+                    query = '''SELECT xp, energy, status FROM players WHERE user_id = $1'''
+                    result = await conn.fetchrow(query, ctx.message.author.id)
+                except Exception as e:
+                    await self.client.say('Something went wrong!')
+                    print(e)
+                else:
+                    embed = discord.Embed(title=ctx.message.author.display_name, color=color)
+                    embed.set_thumbnail(url=ctx.message.author.avatar_url)
+                    embed.add_field(name='Rank', value=rank)
+                    embed.add_field(name='XP', value=f'{result["xp"]} XP')
+                    embed.add_field(name='Health', value=result['status'].capitalize())
+                    embed.add_field(name='Energy', value=f'{result["energy"]}/10')
+                    await self.client.say(embed=embed)
 
     @commands.command(pass_context=True, aliases=['house', 'inventory'])
     async def home(self, ctx):
@@ -62,6 +64,8 @@ class Player:
             medicine = 0
             materials = 36
             scrap = 107
+
+
 
             embed = discord.Embed(title='Your House',
                                   description='View possible house upgrades by typing `!build`.',

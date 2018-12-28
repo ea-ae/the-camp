@@ -58,6 +58,13 @@ class Admin:
         except Exception as e:
             print(f'Failed to unload extension "{extension}":\n{type(e).__name__}\n{e}')
 
+    @commands.command(pass_context=True)
+    async def say(self, ctx, *, msg):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
+        await self.client.say(msg)
+
 
 def setup(client):
     client.add_cog(Admin(client))
