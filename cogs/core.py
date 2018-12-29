@@ -32,16 +32,17 @@ class Core:
             await self.client.send_message(ctx.message.channel, 'Unknown command. Type `!help` for a list of commands.')
 
     @commands.command()
-    async def help(self, command=None):
-        # await self.generate_status_message()  # TEMP
+    async def help(self):
         # await self.client.say('I don\'t need any help from you right now, but thanks for asking.')
-        if command is None:
-            await self.client.say('**Basic Commands**\n'
-                                  '`!help` - Show a list of commands.\n'
-                                  '`!status` - View information about your character.\n'
-                                  '`!home` - Check your inventory and home status.\n'
-                                  '`!join` - Join a new game.\n'
-                                  '\n*If you are confused about some game mechanic, read the docs channel.*')
+        await self.client.say(
+            '**General Commands**\n'
+            '`!help` - Show this list of commands.\n'
+            '`!status` - View information about your character.\n'
+            '`!home` - Check your inventory and home status.\n'
+            '`!join` - Join a new game.\n'
+            '\n**Action Commands**\n'
+            '`!farm <amount>` - Work in the farm. You may specify how many times you want to repeat this action.\n'
+            '\n*If you are confused about some game mechanic, read the docs channel.*')
 
 
 def setup(client):

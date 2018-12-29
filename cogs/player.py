@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from .utils import get_user_roles, update_user_energy, get_user_columns, set_user_columns
+from .utils import get_user_roles, update_user_energy, get_user_columns, set_resources
 
 
 class Player:
@@ -49,40 +49,42 @@ class Player:
 
     @commands.command(pass_context=True, aliases=['house', 'inventory'])
     async def home(self, ctx):
+        # TODO: Perhaps xp/energy should also be included in this command?
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
-        if any([role in user_roles for role in ('Alive', 'Dead')]):
-            if 'Professional' in user_roles:
-                color = 0xf04c4c
-            elif 'Veteran' in user_roles:
-                color = 0xd1810d
-            elif 'Survivor' in user_roles:
-                color = 0xf0ca12
-            else:
-                color = 0xffffff
+        if not any([role in user_roles for role in ('Alive', 'Dead')]):
+            return
 
-            # Test
-            x = await set_user_columns(self.client.db, ctx.message.author, {'food': 1,
-                                                                            'energy': -1,
-                                                                            'scrap': 4,
-                                                                            'fuel': (7, False)})
-            print('Back to player.py........')
-            print(x)
-            result = await get_user_columns(self.client.db, ctx.message.author,
-                                            'food', 'fuel', 'medicine', 'materials', 'scrap')
+        if 'Professional' in user_roles:
+            color = 0xf04c4c
+        elif 'Veteran' in user_roles:
+            color = 0xd1810d
+        elif 'Survivor' in user_roles:
+            color = 0xf0ca12
+        else:
+            color = 0xffffff
 
-            embed = discord.Embed(title='Your House',
-                                  description='Build house upgrades by typing `!build <upgrade_name>`.\n'
-                                              '**Safe (0/3)** - Protect your belongings from thieves.\n'
-                                              '**Heater (0/3)** - Conserve fuel when heating your house.\n'
-                                              '**Reinforcements (0/3)** - Protect your house from any attacks.',
-                                  color=color)
-            embed.set_author(name=ctx.message.author.display_name)
-            embed.add_field(name='Food', value=result['food'])
-            embed.add_field(name='Fuel', value=result['fuel'])
-            embed.add_field(name='Medicine', value=result['medicine'])
-            embed.add_field(name='Materials', value=result['materials'])
-            embed.add_field(name='Scrap', value=result['scrap'])
-            await self.client.say(embed=embed)
+        # Test
+        x = await set_resources(self.client.db, ctx.message.author, {'energy': 12,
+                                                                     'scrap': 4,
+                                                                     'fuel': (7, False)})
+        print('Back to player.py........')
+        print(x)
+        result = await get_user_columns(self.client.db, ctx.message.author,
+                                        'food', 'fuel', 'medicine', 'materials', 'scrap')
+
+        embed = discord.Embed(title='Your House',
+                              description='Build house upgrades by typing `!build <upgrade_name>`.\n'
+                                          '**Safe (0/3)** - Protect your belongings from thieves.\n'
+                                          '**Heater (0/3)** - Conserve fuel when heating your house.\n'
+                                          '**Reinforcements (0/3)** - Protect your house from any attacks.',
+                              color=color)
+        embed.set_author(name=ctx.message.author.display_name)
+        embed.add_field(name='Food', value=result['food'])
+        embed.add_field(name='Fuel', value=result['fuel'])
+        embed.add_field(name='Medicine', value=result['medicine'])
+        embed.add_field(name='Materials', value=result['materials'])
+        embed.add_field(name='Scrap', value=result['scrap'])
+        await self.client.say(embed=embed)
 
 
 def setup(client):

@@ -12,7 +12,7 @@ class Admin:
     def __init__(self, client):
         self.client = client
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, aliases=['sd'])
     async def shutdown(self, ctx):
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:

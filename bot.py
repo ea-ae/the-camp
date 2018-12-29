@@ -8,7 +8,7 @@ from config import *
 
 description = 'The Camp is a game about surviving together in a post-apocalypse world as long as possible.'
 command_prefix = '!'
-extensions = ['core', 'admin', 'camp', 'ranks', 'player']
+extensions = ['core', 'admin', 'camp', 'ranks', 'player', 'actions']
 
 
 def run():

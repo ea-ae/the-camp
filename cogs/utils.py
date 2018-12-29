@@ -28,7 +28,7 @@ async def get_user_columns(db, user, *args):
     return result
 
 
-async def set_user_columns(db, user, columns):
+async def set_resources(db, user, columns):
     async def update_columns(conn):
         column_list = list(columns.keys())
         if 'energy' in column_list:
@@ -40,6 +40,7 @@ async def set_user_columns(db, user, columns):
         # If the energy column is affected, then first update it
         last_energy = None
         if 'energy' in column_list:
+            # TODO: Energy should also consume food
             max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
             print(f'*** energy before: {result["energy"]}')
             last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
