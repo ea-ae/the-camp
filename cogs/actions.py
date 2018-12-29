@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from .utils import get_user_roles, set_resources
+from .utils import get_user_roles, set_resources, update_camp_status
 
 
 class Player:
@@ -36,6 +36,8 @@ class Player:
                 await self.client.say(
                     f'You earned **{camp_food}** food ration{"s" if camp_food > 1 else ""} for the camp '
                     f'and **{personal_food}** food ration{"s" if personal_food > 1 else ""} for yourself.')
+
+            await update_camp_status(self.client)  # Temporary!
 
     @commands.group(pass_context=True)
     async def mine(self, ctx, amount=1):

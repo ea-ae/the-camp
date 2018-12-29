@@ -1,3 +1,4 @@
+from discord import Embed
 from asyncpg.pool import Pool, PoolConnectionProxy
 import datetime
 
@@ -95,3 +96,55 @@ async def update_user_energy(timestamp, energy, max_energy):
     new_energy = min(max_energy, energy + hours)
     new_timestamp = datetime.datetime.now() - leftover_time
     return new_timestamp, new_energy
+
+
+async def update_camp_status(client):
+    # Temporary fake data
+    population = 100
+    temperature = -33
+    defense = 5411
+
+    food = 1079
+    fuel = 205
+    medicine = 60
+    materials = 2509
+    scrap = 9487
+
+    reset_camp = False  # Set to true if you want to set the camp's data back to the defaults
+
+    async with client.db.acquire() as conn:
+        if reset_camp:
+            query = '''INSERT INTO global VALUES ('temp', -30) ON CONFLICT (name) DO UPDATE SET value = -30;
+            INSERT INTO global VALUES ('defense', 1000) ON CONFLICT (name) DO UPDATE SET value = 1000;
+            INSERT INTO global VALUES ('food', 200) ON CONFLICT (name) DO UPDATE SET value = 200;
+            INSERT INTO global VALUES ('fuel', 1000) ON CONFLICT (name) DO UPDATE SET value = 1000;
+            INSERT INTO global VALUES ('medicine', 100) ON CONFLICT (name) DO UPDATE SET value = 100;
+            INSERT INTO global VALUES ('materials', 0) ON CONFLICT (name) DO UPDATE SET value = 0;
+            INSERT INTO global VALUES ('scrap', 500) ON CONFLICT (name) DO UPDATE SET value = 500;'''
+            await conn.execute(query)
+        try:
+            query = '''SELECT * FROM global'''
+            result = await conn.fetch(query)
+        except Exception as e:
+            print(e)
+            return
+
+    status_embed = Embed(color=0x128f39)
+    status_embed.add_field(name='Temperature', value=f'{result[0]["value"]}°C', inline=False)
+    status_embed.add_field(name='Defense Points', value=result[1]["value"], inline=False)
+
+    warehouse_embed = Embed(color=0xe59b16)
+    warehouse_embed.add_field(name='Food', value=result[2]["value"], inline=False)
+    warehouse_embed.add_field(name='Fuel', value=result[3]["value"], inline=False)
+    warehouse_embed.add_field(name='Medicine', value=result[4]["value"], inline=False)
+    warehouse_embed.add_field(name='Materials', value=result[5]["value"], inline=False)
+    warehouse_embed.add_field(name='Scrap', value=result[6]["value"], inline=False)
+
+    i = 0
+    async for message in client.logs_from(client.channels['camp-status']):
+        if message.author == client.user:
+            if i == 0:
+                await client.edit_message(message, new_content='**Warehouse**', embed=warehouse_embed)
+            elif i == 1:
+                await client.edit_message(message, new_content='**Camp Status**', embed=status_embed)
+            i += 1
