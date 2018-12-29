@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from .utils import get_user_roles
+from .utils import get_user_roles, update_user_energy
 
 
 class Player:
@@ -31,8 +31,12 @@ class Player:
 
             async with self.client.db.acquire() as conn:
                 try:
-                    query = '''SELECT xp, energy, status FROM players WHERE user_id = $1'''
+                    query = '''SELECT xp, energy, last_energy, status FROM players WHERE user_id = $1'''
                     result = await conn.fetchrow(query, ctx.message.author.id)
+
+                    max_energy = 12  # Make max energy upgradable later on in the game
+                    # We get the updated energy, but don't update it in the db, since it will be checked again anyway
+                    last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
                 except Exception as e:
                     await self.client.say('Something went wrong!')
                     print(e)
@@ -42,7 +46,7 @@ class Player:
                     embed.add_field(name='Rank', value=rank)
                     embed.add_field(name='XP', value=f'{result["xp"]} XP')
                     embed.add_field(name='Health', value=result['status'].capitalize())
-                    embed.add_field(name='Energy', value=f'{result["energy"]}/10')
+                    embed.add_field(name='Energy', value=f'{energy}/{max_energy}')
                     await self.client.say(embed=embed)
 
     @commands.command(pass_context=True, aliases=['house', 'inventory'])
