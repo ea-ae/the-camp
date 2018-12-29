@@ -42,6 +42,7 @@ class Core:
             '`!join` - Join a new game.\n'
             '\n**Action Commands**\n'
             '`!farm <amount>` - Work in the farm. You may specify how many times you want to repeat this action.\n'
+            '`!mine <amount> - Work in the mine. You may specify how many times you want to repeat this action.\n'
             '\n*If you are confused about some game mechanic, read the docs channel.*')
 
 

@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import traceback
 
 from .utils import get_user_roles, set_resources, update_camp_status
 
@@ -14,16 +13,15 @@ class Player:
         self.client = client
 
     @commands.group(pass_context=True)
-    async def farm(self, ctx, amount=1):
+    async def farm(self, ctx, amount='1'):
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
         if not any([role in user_roles for role in ('Alive', 'Dead')]):
             return
 
-        try:
-            amount = int(amount)
-        except ValueError:
+        if not amount.isdigit():
             await self.client.say('Invalid command!')
         else:
+            amount = int(amount)
             # The amount of food farmed will depend on character upgrades later on
             camp_food = amount
             personal_food = amount
@@ -37,37 +35,36 @@ class Player:
                 await self.client.say(
                     f'You earned **{camp_food}** food ration{"s" if camp_food > 1 else ""} for the camp '
                     f'and **{personal_food}** food ration{"s" if personal_food > 1 else ""} for yourself.')
-                print('OK START')
                 await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
-                print('OK END')
             else:
                 await self.client.say(result)
 
     @commands.group(pass_context=True)
-    async def mine(self, ctx, amount=1):
+    async def mine(self, ctx, amount='1'):
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
         if not any([role in user_roles for role in ('Alive', 'Dead')]):
             return
 
-        try:
-            amount = int(amount)
-        except ValueError:
-            pass
+        if not amount.isdigit():
+            await self.client.say('Invalid command!')
         else:
-            # The amount of food farmed will depend on character upgrades later on
+            amount = int(amount)
+            # The amount of materials mined will depend on character upgrades later on
             camp_mtr = amount
             personal_mtr = amount
 
-            # TODO: Give the camp 1 food ration as well
+            result = await set_resources(self.client.db,
+                                         ctx.message.author,
+                                         {'materials': personal_mtr, 'energy': -amount},
+                                         {'materials': camp_mtr})
 
-            result = await set_user_resources(self.client.db, ctx.message.author, {'materials': amount,
-                                                                                   'energy': -amount})
-            if type(result) is str:  # Error
-                await self.client.say(result)
-            else:
+            if result is True:
                 await self.client.say(
                     f'You earned **{camp_mtr}** material{"s" if camp_mtr > 1 else ""} for the camp '
                     f'and **{personal_mtr}** material{"s" if personal_mtr > 1 else ""} for yourself.')
+                await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
+            else:
+                await self.client.say(result)
 
 
 def setup(client):
