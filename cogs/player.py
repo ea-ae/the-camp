@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from .utils import get_user_roles, update_user_energy
+from .utils import get_user_roles, update_user_energy, get_user_columns
 
 
 class Player:
@@ -29,25 +29,23 @@ class Player:
                 rank = 'None'
                 color = 0xffffff
 
-            async with self.client.db.acquire() as conn:
-                try:
-                    query = '''SELECT xp, energy, last_energy, status FROM players WHERE user_id = $1'''
-                    result = await conn.fetchrow(query, ctx.message.author.id)
+            result = await get_user_columns(self.client.db, ctx.message.author, 'xp', 'energy', 'last_energy', 'status')
+            if result is False:
+                await self.client.say('Something went wrong!')
+            else:
+                max_energy = 12  # Make max energy upgradable later on in the game
+                # We get the updated energy, but don't update it in the db, since it will be checked again anyway
 
-                    max_energy = 12  # Make max energy upgradable later on in the game
-                    # We get the updated energy, but don't update it in the db, since it will be checked again anyway
-                    last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
-                except Exception as e:
-                    await self.client.say('Something went wrong!')
-                    print(e)
-                else:
-                    embed = discord.Embed(title=ctx.message.author.display_name, color=color)
-                    embed.set_thumbnail(url=ctx.message.author.avatar_url)
-                    embed.add_field(name='Rank', value=rank)
-                    embed.add_field(name='XP', value=f'{result["xp"]} XP')
-                    embed.add_field(name='Health', value=result['status'].capitalize())
-                    embed.add_field(name='Energy', value=f'{energy}/{max_energy}')
-                    await self.client.say(embed=embed)
+                last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
+
+                embed = discord.Embed(title=ctx.message.author.display_name, color=color)
+                embed.set_thumbnail(url=ctx.message.author.avatar_url)
+                embed.add_field(name='Rank', value=rank)
+                embed.add_field(name='XP', value=f'{result["xp"]} XP')
+                embed.add_field(name='Health', value=result['status'].capitalize())
+                embed.add_field(name='Energy', value=f'{energy}/{max_energy}')
+
+                await self.client.say(embed=embed)
 
     @commands.command(pass_context=True, aliases=['house', 'inventory'])
     async def home(self, ctx):
@@ -62,24 +60,21 @@ class Player:
             else:
                 color = 0xffffff
 
-            # Temporary fake values
-            food = 17
-            fuel = 5
-            medicine = 0
-            materials = 36
-            scrap = 107
-
-
+            result = await get_user_columns(self.client.db, ctx.message.author,
+                                            'food', 'fuel', 'medicine', 'materials', 'scrap')
 
             embed = discord.Embed(title='Your House',
-                                  description='View possible house upgrades by typing `!build`.',
+                                  description='Build house upgrades by typing `!build <upgrade_name>`.\n'
+                                              '**Safe (0/3)** - Protect your belongings from thieves.\n'
+                                              '**Heater (0/3)** - Conserve fuel when heating your house.\n'
+                                              '**Reinforcements (0/3)** - Protect your house from any attacks.',
                                   color=color)
             embed.set_author(name=ctx.message.author.display_name)
-            embed.add_field(name='Food', value=food)
-            embed.add_field(name='Fuel', value=fuel)
-            embed.add_field(name='Medicine', value=medicine)
-            embed.add_field(name='Materials', value=materials)
-            embed.add_field(name='Scrap', value=scrap)
+            embed.add_field(name='Food', value=result['food'])
+            embed.add_field(name='Fuel', value=result['fuel'])
+            embed.add_field(name='Medicine', value=result['medicine'])
+            embed.add_field(name='Materials', value=result['materials'])
+            embed.add_field(name='Scrap', value=result['scrap'])
             await self.client.say(embed=embed)
 
 
