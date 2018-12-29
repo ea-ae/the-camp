@@ -10,51 +10,60 @@ async def get_user_roles(server, user):
 
 
 async def get_user_columns(db, user, *args):
-    async def select_columns(c):
+    async def select_columns(conn):
         try:
             query = f'''SELECT {','.join(args)} FROM players WHERE user_id = $1;'''
-            return await c.fetchrow(query, user.id)
+            return await conn.fetchrow(query, user.id)
         except Exception as e:
             print(e)
             return False
 
     result = False
     if type(db) == Pool:
-        async with db.acquire() as conn:
-            result = await select_columns(conn)
+        async with db.acquire() as c:
+            result = await select_columns(c)
     elif type(db) == PoolConnectionProxy:
         result = await select_columns(db)
     return result
 
 
-async def set_user_resources(conn, user, resources):
-    resource_list = list(resources.keys())
+async def set_user_columns(db, user, columns):
+    async def update_columns(conn):
+        column_list = list(columns.keys())
 
-    tr = conn.transaction()
-    await tr.start()
+        query = f'''SELECT {','.join(column_list)} FROM players WHERE user_id = $1;'''
+        result = await conn.fetchrow(query, user.id)
 
-    try:
-        query = f'''SELECT {','.join(resource_list)} FROM players WHERE user_id = $1);'''
-        result = await conn.fetchval(query, user.id)
+        sets = []
+        for key, value in columns.items():
+            if isinstance(value, tuple) and value[1] is False:  # Absolute
+                sets.append(f'{key} = {value[0]}')
+            else:  # Relative
+                if result[key] < value:  # Would result in a negative number
+                    return f'You don\'t have enough {value}.'
+                sets.append(f'{key} = {key} + {value}')
 
-        for key, value in resources.items():
-            if isinstance(value, tuple):
-                resource = value
-                relative = value[1]
-            else:
-                resource = value
-                relative = True
+        tr = conn.transaction()
+        await tr.start()
 
-        query = '''INSERT INTO players (user_id, status) VALUES ($1, 'normal')'''
-        await conn.execute(query, ctx.message.author.id)
-    except Exception as e:
-        await tr.rollback()
+        try:
+            query = f'''UPDATE players SET {','.join(sets)} WHERE user_id = $1'''
+            await conn.execute(query, user.id)
+        except Exception as e:
+            await tr.rollback()
+            print(e)
+            return 'Something went wrong!'
+        else:
+            await tr.commit()
+            return result
 
-        print(e)
-        return 'Something went wrong!'
-    else:
-        await tr.commit()
-        return True
+    status = 'Something went wrong!'
+    if type(db) == Pool:
+        async with db.acquire() as c:
+            status = await update_columns(c)
+    elif type(db) == PoolConnectionProxy:
+        status = await update_columns(db)
+    return status
 
 
 async def update_user_energy(timestamp, energy, max_energy):

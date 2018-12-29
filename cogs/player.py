@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from .utils import get_user_roles, update_user_energy, get_user_columns
+from .utils import get_user_roles, update_user_energy, get_user_columns, set_user_columns
 
 
 class Player:
@@ -60,6 +60,10 @@ class Player:
             else:
                 color = 0xffffff
 
+            # Test:
+            # await set_user_columns(self.client.db, ctx.message.author, {'food': 1,
+            #                                                             'scrap': -2,
+            #                                                             'fuel': (7, False)})
             result = await get_user_columns(self.client.db, ctx.message.author,
                                             'food', 'fuel', 'medicine', 'materials', 'scrap')
 
