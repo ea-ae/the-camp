@@ -29,6 +29,40 @@ async def get_user_columns(db, user, *args):
     return result
 
 
+async def set_resources(db, user, columns, resources, negative_to_zero=False):
+    async def run_queries(conn):
+        camp_query = await set_camp_resources(conn, resources, False)
+        if type(camp_query) is str:  # Error
+            return camp_query
+
+        user_query = await set_user_resources(conn, user, columns, False)
+        if type(user_query) is str:  # Error
+            return user_query
+
+        tr = conn.transaction()
+        await tr.start()
+        try:
+            await conn.execute(camp_query['query'])
+            await conn.execute(user_query['query'], *user_query['args'])
+        except Exception as e:
+            await tr.rollback()
+            print(e)
+            return 'Something went wrong!'
+        else:
+            await tr.commit()
+            return True
+
+    result = 'Something went wrong!'
+    if type(db) == Pool:
+        async with db.acquire() as c:
+            print('1')
+            result = await run_queries(c)
+    elif type(db) == PoolConnectionProxy:
+        print('2')
+        result = await run_queries(db)
+    return result
+
+
 async def set_user_resources(db, user, columns, execute_query=True):
     async def update_columns(conn):
         last_energy = None
@@ -59,9 +93,6 @@ async def set_user_resources(db, user, columns, execute_query=True):
             if isinstance(value, tuple) and value[1] is False:  # Absolute
                 sets.append(f'{key} = {value[0]}')
             else:  # Relative
-                print(key)
-                print(value)
-                print(result[key])
                 if result[key] < value * -1:  # Would result in a negative number
                     return f'You don\'t have enough {key}.'
                 sets.append(f'{key} = {key} + {value}')
@@ -164,6 +195,7 @@ async def update_user_energy(timestamp, energy, max_energy):
 
 
 async def update_camp_status(client):
+    print('Updating camp status...')
     reset_camp = False  # Set to true if you want to set the camp's data back to the defaults
 
     async with client.db.acquire() as conn:

@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import traceback
 
-from .utils import get_user_roles, set_user_resources, set_camp_resources, update_camp_status
+from .utils import get_user_roles, set_resources, update_camp_status
 
 
 class Player:
@@ -22,45 +22,26 @@ class Player:
         try:
             amount = int(amount)
         except ValueError:
-            pass
+            await self.client.say('Invalid command!')
         else:
             # The amount of food farmed will depend on character upgrades later on
             camp_food = amount
             personal_food = amount
 
-            async with self.client.db.acquire() as conn:
-                user_query = await set_user_resources(conn, ctx.message.author,
-                                                      {'food': amount, 'energy': -amount}, False)
-                print(user_query)
+            result = await set_resources(self.client.db,
+                                         ctx.message.author,
+                                         {'food': personal_food, 'energy': -amount},
+                                         {'food': camp_food})
 
-                if type(user_query) is str:  # Error
-                    await self.client.say(user_query)
-                    return
-
-                camp_query = await set_camp_resources(conn, {'food': amount, 'medicine': 1, 'fuel': -10}, False)
-                print(camp_query)
-
-                if type(camp_query) is str:  # Error
-                    await self.client.say(camp_query)
-                    return
-
-                tr = conn.transaction()
-                await tr.start()
-
-                try:
-                    await conn.execute(user_query['query'], *user_query['args'])
-                    await conn.execute(camp_query['query'])
-                except Exception as e:
-                    await tr.rollback()
-                    print(e)
-                    self.client.say('Something went wrong!')
-                else:
-                    await tr.commit()
-                    await self.client.say(
-                        f'You earned **{camp_food}** food ration{"s" if camp_food > 1 else ""} for the camp '
-                        f'and **{personal_food}** food ration{"s" if personal_food > 1 else ""} for yourself.')
-
-                    await update_camp_status(self.client)  # Temporary!
+            if result is True:
+                await self.client.say(
+                    f'You earned **{camp_food}** food ration{"s" if camp_food > 1 else ""} for the camp '
+                    f'and **{personal_food}** food ration{"s" if personal_food > 1 else ""} for yourself.')
+                print('OK START')
+                await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
+                print('OK END')
+            else:
+                await self.client.say(result)
 
     @commands.group(pass_context=True)
     async def mine(self, ctx, amount=1):
