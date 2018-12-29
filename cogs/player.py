@@ -33,7 +33,7 @@ class Player:
             if result is False:
                 await self.client.say('Something went wrong!')
             else:
-                max_energy = 12  # Make max energy upgradable later on in the game
+                max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
                 # We get the updated energy, but don't update it in the db, since it will be checked again anyway
 
                 last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
@@ -60,10 +60,13 @@ class Player:
             else:
                 color = 0xffffff
 
-            # Test:
-            # await set_user_columns(self.client.db, ctx.message.author, {'food': 1,
-            #                                                             'scrap': -2,
-            #                                                             'fuel': (7, False)})
+            # Test
+            x = await set_user_columns(self.client.db, ctx.message.author, {'food': 1,
+                                                                            'energy': -1,
+                                                                            'scrap': 4,
+                                                                            'fuel': (7, False)})
+            print('Back to player.py........')
+            print(x)
             result = await get_user_columns(self.client.db, ctx.message.author,
                                             'food', 'fuel', 'medicine', 'materials', 'scrap')
 
