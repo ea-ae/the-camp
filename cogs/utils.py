@@ -29,17 +29,19 @@ async def get_user_columns(db, user, *args):
     return result
 
 
-async def set_resources(db, user, columns):
+async def set_user_resources(db, user, columns, execute_query=True):
     async def update_columns(conn):
+        last_energy = None
         column_list = list(columns.keys())
+
         if 'energy' in column_list:
             column_list.append('last_energy')
 
         query = f'''SELECT {','.join(column_list)} FROM players WHERE user_id = $1;'''
+        # TODO: No we don't!
         result = dict(await conn.fetchrow(query, user.id))  # We have to edit this data, so make it a dict
 
         # If the energy column is affected, then first update it
-        last_energy = None
         if 'energy' in column_list:
             # TODO: Energy should also consume food
             max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
@@ -48,44 +50,107 @@ async def set_resources(db, user, columns):
             print(f'*** energy after: {energy}')
             energy_gain = energy - result['energy']
             print(f'*** energy gain: {energy_gain}')
-            columns['energy'] += energy_gain
-            print(last_energy)
+            result['energy'] += energy_gain
+            # columns['energy'] += energy_gain
+
         # Generate the query
         sets = []
         for key, value in columns.items():
             if isinstance(value, tuple) and value[1] is False:  # Absolute
                 sets.append(f'{key} = {value[0]}')
             else:  # Relative
+                print(key)
+                print(value)
+                print(result[key])
                 if result[key] < value * -1:  # Would result in a negative number
                     return f'You don\'t have enough {key}.'
                 sets.append(f'{key} = {key} + {value}')
 
-        tr = conn.transaction()
-        await tr.start()
+        if execute_query:
+            tr = conn.transaction()
+            await tr.start()
 
-        try:
-            if 'energy' in column_list:
-                query = f'''UPDATE players SET {','.join(sets)}, last_energy = $1 WHERE user_id = $2'''
-                row = await conn.execute(query, last_energy, user.id)
-                print('Energy row result')
-                print(row)
+            try:
+                if 'energy' in column_list:
+                    query = f'''UPDATE players SET {','.join(sets)}, last_energy = $1 WHERE user_id = $2'''
+                    row = await conn.execute(query, last_energy, user.id)
+                else:
+                    query = f'''UPDATE players SET {','.join(sets)} WHERE user_id = $1'''
+                    await conn.execute(query, user.id)
+
+            except Exception as e:
+                await tr.rollback()
+                print(e)
+                return 'Something went wrong!'
             else:
-                query = f'''UPDATE players SET {','.join(sets)} WHERE user_id = $1'''
-                await conn.execute(query, user.id)
-        except Exception as e:
-            await tr.rollback()
-            print(e)
-            return 'Something went wrong!'
-        else:
-            await tr.commit()
-            return result
+                await tr.commit()
+                return result
+        else:  # Instead of executing, just return the query string and args
+            if 'energy' in column_list:
+                return {
+                    'query': f'''UPDATE players SET {','.join(sets)}, last_energy = $1 WHERE user_id = $2''',
+                    'args': [last_energy, user.id]
+                }
+            else:
+                return {
+                    'query': f'''UPDATE players SET {','.join(sets)} WHERE user_id = $1''',
+                    'args': [user_id]
+                }
 
     status = 'Something went wrong!'
+
     if type(db) == Pool:
         async with db.acquire() as c:
             status = await update_columns(c)
     elif type(db) == PoolConnectionProxy:
         status = await update_columns(db)
+
+    return status
+
+
+async def set_camp_resources(db, resources, execute_query=True, negative_to_zero=False):
+    async def update_data(conn):
+        camp_list = [f'name = \'{name}\'' for name in resources.keys()]
+
+        query = f'''SELECT name, value FROM global WHERE {' OR '.join(camp_list)};'''
+        results = await conn.fetch(query)
+        print('camp results: ')
+        print(results)
+
+        q = ''''''
+        for result in results:
+            if resources[result['name']] * -1 > result['value']:  # Would run out of resources
+                if not negative_to_zero:
+                    return f'The camp doesn\'t have enough {result["name"]}.'
+                q += f'''UPDATE global SET value = 0 WHERE name = '{result['name']}';'''
+            q += f'''UPDATE global SET value = value + {resources[result['name']]} WHERE name = '{result['name']}';'''
+
+        if execute_query:
+            tr = conn.transaction()
+            await tr.start()
+
+            try:
+                await conn.execute(q)
+            except Exception as e:
+                await tr.rollback()
+                print(e)
+                return 'Something went wrong!'
+            else:
+                await tr.commit()
+                return results
+        else:
+            return {
+                'query': q
+            }
+
+    status = 'Something went wrong!'
+
+    if type(db) == Pool:
+        async with db.acquire() as c:
+            status = await update_data(c)
+    elif type(db) == PoolConnectionProxy:
+        status = await update_data(db)
+
     return status
 
 
@@ -99,17 +164,6 @@ async def update_user_energy(timestamp, energy, max_energy):
 
 
 async def update_camp_status(client):
-    # Temporary fake data
-    population = 100
-    temperature = -33
-    defense = 5411
-
-    food = 1079
-    fuel = 205
-    medicine = 60
-    materials = 2509
-    scrap = 9487
-
     reset_camp = False  # Set to true if you want to set the camp's data back to the defaults
 
     async with client.db.acquire() as conn:
@@ -124,21 +178,22 @@ async def update_camp_status(client):
             await conn.execute(query)
         try:
             query = '''SELECT * FROM global'''
-            result = await conn.fetch(query)
+            result = dict(await conn.fetch(query))
+            print(result)
         except Exception as e:
             print(e)
             return
 
     status_embed = Embed(color=0x128f39)
-    status_embed.add_field(name='Temperature', value=f'{result[0]["value"]}°C', inline=False)
-    status_embed.add_field(name='Defense Points', value=result[1]["value"], inline=False)
+    status_embed.add_field(name='Temperature', value=f'{result["temp"]}°C', inline=False)
+    status_embed.add_field(name='Defense Points', value=result["defense"], inline=False)
 
     warehouse_embed = Embed(color=0xe59b16)
-    warehouse_embed.add_field(name='Food', value=result[2]["value"], inline=False)
-    warehouse_embed.add_field(name='Fuel', value=result[3]["value"], inline=False)
-    warehouse_embed.add_field(name='Medicine', value=result[4]["value"], inline=False)
-    warehouse_embed.add_field(name='Materials', value=result[5]["value"], inline=False)
-    warehouse_embed.add_field(name='Scrap', value=result[6]["value"], inline=False)
+    warehouse_embed.add_field(name='Food', value=result["food"], inline=False)
+    warehouse_embed.add_field(name='Fuel', value=result["fuel"], inline=False)
+    warehouse_embed.add_field(name='Medicine', value=result["medicine"], inline=False)
+    warehouse_embed.add_field(name='Materials', value=result["materials"], inline=False)
+    warehouse_embed.add_field(name='Scrap', value=result["scrap"], inline=False)
 
     i = 0
     async for message in client.logs_from(client.channels['camp-status']):

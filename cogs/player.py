@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from .utils import get_user_roles, update_user_energy, get_user_columns, set_resources
+from .utils import get_user_roles, update_user_energy, get_user_columns, set_user_resources
 
 
 class Player:
@@ -63,12 +63,14 @@ class Player:
         else:
             color = 0xffffff
 
-        # Test
-        x = await set_resources(self.client.db, ctx.message.author, {'energy': 12,
-                                                                     'scrap': 4,
-                                                                     'fuel': (7, False)})
-        print('Back to player.py........')
-        print(x)
+        # Testing
+        if 'Developer' in user_roles:
+            x = await set_user_resources(self.client.db, ctx.message.author, {'energy': 12,
+                                                                              'scrap': 4,
+                                                                              'fuel': (7, False)})
+            print('Back to player.py........')
+            print(x)
+
         result = await get_user_columns(self.client.db, ctx.message.author,
                                         'food', 'fuel', 'medicine', 'materials', 'scrap')
 
