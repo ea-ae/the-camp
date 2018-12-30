@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import json
 
 from .utils import get_user_roles, update_user_energy, get_user_columns, set_user_resources
 
@@ -68,8 +69,8 @@ class Player:
             'food', 'fuel', 'medicine', 'materials', 'scrap', 'energy', 'last_energy'
         )
 
-        footer = ('Build house upgrades by typing "!build <upgrade_name>". '
-                  'Craft items by typing "!craft <item_name> <amount>".')
+        description = ('View your available house upgrades with `!build`.\n'
+                       'View your available crafting recipes with `!craft`.')
 
         house_upgrades = ('**Safe (0/3)** - Protect your belongings from thieves.\n'
                           '**Heater (0/3)** - Conserve fuel when heating your house.\n'
@@ -81,8 +82,7 @@ class Player:
         max_energy = 12
         last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
 
-        embed = discord.Embed(title='Your House', color=color)
-        embed.set_footer(text=footer)
+        embed = discord.Embed(title='Your House', description=description, color=color)
 
         embed.add_field(name='House Upgrades', value=house_upgrades, inline=False)
         embed.add_field(name='Inventory', value=inventory, inline=False)
@@ -96,6 +96,42 @@ class Player:
 
         await self.client.say(embed=embed)
 
+    @commands.command(pass_context=True)
+    async def build(self, ctx, upgrade=None):
+        upgrade_costs = {
+            'safe': [10, 20, 50],
+            'heater': [15, 30, 60],
+            'reinforcements': [25, 50, 100]
+        }
+
+        if upgrade is None:
+            result = await get_user_columns(self.client.db, ctx.message.author, 'house_upgrades')
+            upgrades = json.loads(result['house_upgrades'])
+
+            await self.client.say(
+                f'Build an house upgrade by typing `!build <upgrade_name>`.\n\n'
+                f'**Safe ({upgrades.get("safe", 0)}/3)** - Protect your belongings from thieves '
+                f'({upgrade_costs["safe"][upgrades.get("safe", 0)]} materials).\n'
+                f'**Heater ({upgrades.get("heater", 0)}/3)** - Conserve fuel when heating your house '
+                f'({upgrade_costs["heater"][upgrades.get("heater", 0)]} materials).\n'
+                f'**Reinforcements ({upgrades.get("reinforcements", 0)}/3)** - Protect your house from attacks '
+                f'({upgrade_costs["reinforcements"][upgrades.get("reinforcements", 0)]} materials).\n')
+        elif upgrade.lower() in upgrade_costs.keys(): 
+            # Kind of inefficient (two SELECT queries for the same row are made), but who cares anyway
+            upgrade = upgrade.lower()
+            result = await get_user_columns(self.client.db, ctx.message.author, 'house_upgrades')
+            upgrades = json.loads(result['house_upgrades'])
+            cost = upgrade_costs[upgrade][upgrades.get(upgrade, 0)]
+
+            result = await set_user_resources(self.client.db, ctx.message.author, {'materials': -cost})
+
+            if type(result) is str:
+                await self.client.say(result)
+            else:
+                await self.client.say(f'You have upgraded the **{upgrade}** to level '
+                                      f'**{upgrades.get(upgrade, 0) + 1}** for **{cost}** materials.')
+        else:
+            await self.client.say('No upgrades with such a name exist! Type `!build` for a list of upgrades.')
 
 def setup(client):
     client.add_cog(Player(client))

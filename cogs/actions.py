@@ -61,8 +61,8 @@ class Player:
 
             if result is True:
                 await self.client.say(
-                    f'You earned **{mats}** material{"s" if mats > 1 else ""} and **{fuel}** fuel for both '
-                    f'yourself and the camp.')
+                    f'You earned **{mats}** material{"s" if mats > 1 or mats == 0 else ""} and '
+                    f'**{fuel}** fuel for both yourself and the camp.')
                 await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
             else:
                 await self.client.say(result)

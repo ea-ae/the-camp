@@ -65,7 +65,7 @@ class Admin:
             return
         await self.client.say(msg)
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, aliases=['fillenergy'])
     async def instarest(self, ctx):
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' in user_roles:
@@ -81,7 +81,7 @@ class Admin:
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' in user_roles:
             if reset_data == 'reset':
-                await update_camp_status(self.client, reset_data)
+                await update_camp_status(self.client, True)
             else:
                 await update_camp_status(self.client)
 

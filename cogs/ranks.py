@@ -12,7 +12,6 @@ class Ranks:
     def __init__(self, client):
         self.client = client
 
-    # TODO: Assign roles
     @commands.command(pass_context=True)
     async def join(self, ctx):
         async def add_player(alive, new_player, energy):
@@ -29,7 +28,7 @@ class Ranks:
                     await conn.execute(query, ctx.message.author.id)
                 else:
                     query = '''UPDATE players SET energy = $1, food = default, fuel = default,
-                    medicine = default, materials = default, scrap = default, house_upgrades = NULL,
+                    medicine = default, materials = default, scrap = default, house_upgrades = default,
                     till_normal = NULL, last_crime = NULL, status = 'normal', last_energy = default
                     WHERE user_id = $2'''
 
