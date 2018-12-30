@@ -192,12 +192,11 @@ async def update_user_energy(timestamp, energy, max_energy):
     return new_timestamp, new_energy
 
 
-async def update_camp_status(client):
+async def update_camp_status(client, reset_camp_data=False):
     print('Updating camp status...')
-    reset_camp = False  # Set to true if you want to set the camp's data back to the defaults
 
     async with client.db.acquire() as conn:
-        if reset_camp:
+        if reset_camp_data:
             query = '''INSERT INTO global VALUES ('temp', -30) ON CONFLICT (name) DO UPDATE SET value = -30;
             INSERT INTO global VALUES ('defense', 100) ON CONFLICT (name) DO UPDATE SET value = 1000;
             INSERT INTO global VALUES ('food', 200) ON CONFLICT (name) DO UPDATE SET value = 200;

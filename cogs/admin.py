@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from .utils import get_user_roles, set_user_resources
+from .utils import get_user_roles, set_user_resources, update_camp_status
 
 
 class Admin:
@@ -54,7 +54,7 @@ class Admin:
 
         try:
             self.client.unload_extension(f'cogs.{extension}')
-            print(f'Unoaded extension: {extension}')
+            print(f'Unloaded extension: {extension}')
         except Exception as e:
             print(f'Failed to unload extension "{extension}":\n{type(e).__name__}\n{e}')
 
@@ -71,6 +71,19 @@ class Admin:
         if 'Developer' in user_roles:
             await set_user_resources(self.client.db, ctx.message.author, {'energy': (12, False)})
 
+    @commands.command(pass_context=True)
+    async def updatecampstatus(self, ctx, reset_data='noreset'):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
+
+        print('Updating camp status...')
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' in user_roles:
+            if reset_data == 'reset':
+                await update_camp_status(self.client, reset_data)
+            else:
+                await update_camp_status(self.client)
 
 def setup(client):
     client.add_cog(Admin(client))

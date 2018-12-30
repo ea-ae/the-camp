@@ -41,8 +41,9 @@ class Core:
             '`!home` - Check your inventory and home status.\n'
             '`!join` - Join a new game.\n'
             '\n**Action Commands**\n'
-            '`!farm <amount>` - Work in the farm. You may specify how many times you want to repeat this action.\n'
-            '`!mine <amount> - Work in the mine. You may specify how many times you want to repeat this action.\n'
+            '`!farm <amount>` - Work in the farm to earn food rations.\n'
+            '`!mine <amount>` - Work in the mine to earn materials and fuel.\n'
+            '`!guard <amount>` - Work as a guard to increase camp defenses and earn scrap.\n'
             '\n*If you are confused about some game mechanic, read the docs channel.*')
 
 
