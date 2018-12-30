@@ -63,21 +63,37 @@ class Player:
         else:
             color = 0xffffff
 
-        result = await get_user_columns(self.client.db, ctx.message.author,
-                                        'food', 'fuel', 'medicine', 'materials', 'scrap')
+        result = await get_user_columns(
+            self.client.db, ctx.message.author,
+            'food', 'fuel', 'medicine', 'materials', 'scrap', 'energy', 'last_energy'
+        )
 
-        embed = discord.Embed(title='Your House',
-                              description='Build house upgrades by typing `!build <upgrade_name>`.\n'
-                                          '**Safe (0/3)** - Protect your belongings from thieves.\n'
-                                          '**Heater (0/3)** - Conserve fuel when heating your house.\n'
-                                          '**Reinforcements (0/3)** - Protect your house from any attacks.',
-                              color=color)
-        embed.set_author(name=ctx.message.author.display_name)
+        footer = ('Build house upgrades by typing "!build <upgrade_name>". '
+                  'Craft items by typing "!craft <item_name> <amount>".')
+
+        house_upgrades = ('**Safe (0/3)** - Protect your belongings from thieves.\n'
+                          '**Heater (0/3)** - Conserve fuel when heating your house.\n'
+                          '**Reinforcements (0/3)** - Protect your house from any attacks.\n')
+
+        inventory = ('You don\'t have any items in your inventory.'
+                     '')
+
+        max_energy = 12
+        last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
+
+        embed = discord.Embed(title='Your House', color=color)
+        embed.set_footer(text=footer)
+
+        embed.add_field(name='House Upgrades', value=house_upgrades, inline=False)
+        embed.add_field(name='Inventory', value=inventory, inline=False)
+
         embed.add_field(name='Food', value=result['food'])
         embed.add_field(name='Fuel', value=result['fuel'])
         embed.add_field(name='Medicine', value=result['medicine'])
         embed.add_field(name='Materials', value=result['materials'])
         embed.add_field(name='Scrap', value=result['scrap'])
+        embed.add_field(name='Energy', value=f'{energy}/{max_energy}')
+
         await self.client.say(embed=embed)
 
 

@@ -72,7 +72,6 @@ async def set_user_resources(db, user, columns, execute_query=True):
             column_list.append('last_energy')
 
         query = f'''SELECT {','.join(column_list)} FROM players WHERE user_id = $1;'''
-        # TODO: No we don't!
         result = dict(await conn.fetchrow(query, user.id))  # We have to edit this data, so make it a dict
 
         # If the energy column is affected, then first update it
