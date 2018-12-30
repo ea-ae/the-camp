@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import random
 
 from .utils import get_user_roles, set_resources, update_camp_status
 
@@ -49,19 +50,19 @@ class Player:
             await self.client.say('Invalid command!')
         else:
             amount = int(amount)
-            # The amount of materials mined will depend on character upgrades later on
-            camp_mtr = amount
-            personal_mtr = amount
+
+            mats = random.randrange(0, amount + 1)
+            fuel = (amount - mats) * 10
 
             result = await set_resources(self.client.db,
                                          ctx.message.author,
-                                         {'materials': personal_mtr, 'energy': -amount},
-                                         {'materials': camp_mtr})
+                                         {'materials': mats, 'fuel': fuel, 'energy': -amount},
+                                         {'materials': mats, 'fuel': fuel})
 
             if result is True:
                 await self.client.say(
-                    f'You earned **{camp_mtr}** material{"s" if camp_mtr > 1 else ""} for the camp '
-                    f'and **{personal_mtr}** material{"s" if personal_mtr > 1 else ""} for yourself.')
+                    f'You earned **{mats}** material{"s" if mats > 1 else ""} and **{fuel}** fuel for both '
+                    f'yourself and the camp.')
                 await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
             else:
                 await self.client.say(result)

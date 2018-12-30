@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from .utils import get_user_roles
+from .utils import get_user_roles, set_user_resources
 
 
 class Admin:
@@ -64,6 +64,12 @@ class Admin:
         if 'Developer' not in user_roles:
             return
         await self.client.say(msg)
+
+    @commands.command(pass_context=True)
+    async def instarest(self, ctx):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' in user_roles:
+            await set_user_resources(self.client.db, ctx.message.author, {'energy': (12, False)})
 
 
 def setup(client):

@@ -100,7 +100,6 @@ async def set_user_resources(db, user, columns, execute_query=True):
         if execute_query:
             tr = conn.transaction()
             await tr.start()
-
             try:
                 if 'energy' in column_list:
                     query = f'''UPDATE players SET {','.join(sets)}, last_energy = $1 WHERE user_id = $2'''
@@ -108,7 +107,7 @@ async def set_user_resources(db, user, columns, execute_query=True):
                 else:
                     query = f'''UPDATE players SET {','.join(sets)} WHERE user_id = $1'''
                     await conn.execute(query, user.id)
-
+                print(f'Executed query:\n{query}')
             except Exception as e:
                 await tr.rollback()
                 print(e)

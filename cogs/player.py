@@ -63,14 +63,6 @@ class Player:
         else:
             color = 0xffffff
 
-        # Testing
-        if 'Developer' in user_roles:
-            x = await set_user_resources(self.client.db, ctx.message.author, {'energy': 12,
-                                                                              'scrap': 4,
-                                                                              'fuel': (7, False)})
-            print('Back to player.py........')
-            print(x)
-
         result = await get_user_columns(self.client.db, ctx.message.author,
                                         'food', 'fuel', 'medicine', 'materials', 'scrap')
 

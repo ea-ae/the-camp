@@ -23,8 +23,8 @@ class Core:
 
     async def on_member_join(self, member):
         msg = (f'Welcome to **The Camp**, {member.mention}!\n'
-               f'All commands related to the game are sent in private messages.\n'
-               f'To join the camp, simply type `!join`.')
+               f'Most of the commands related to the game are sent in private messages.\n'
+               f'To join the camp, simply type `!join` here.')
         await self.client.send_message(member, msg)
 
     async def on_command_error(self, error, ctx):
