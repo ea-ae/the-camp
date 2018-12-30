@@ -200,7 +200,7 @@ async def update_camp_status(client):
     async with client.db.acquire() as conn:
         if reset_camp:
             query = '''INSERT INTO global VALUES ('temp', -30) ON CONFLICT (name) DO UPDATE SET value = -30;
-            INSERT INTO global VALUES ('defense', 1000) ON CONFLICT (name) DO UPDATE SET value = 1000;
+            INSERT INTO global VALUES ('defense', 100) ON CONFLICT (name) DO UPDATE SET value = 1000;
             INSERT INTO global VALUES ('food', 200) ON CONFLICT (name) DO UPDATE SET value = 200;
             INSERT INTO global VALUES ('fuel', 1000) ON CONFLICT (name) DO UPDATE SET value = 1000;
             INSERT INTO global VALUES ('medicine', 100) ON CONFLICT (name) DO UPDATE SET value = 100;

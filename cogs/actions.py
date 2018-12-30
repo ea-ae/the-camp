@@ -13,10 +13,10 @@ class Player:
     def __init__(self, client):
         self.client = client
 
-    @commands.group(pass_context=True)
+    @commands.command(pass_context=True)
     async def farm(self, ctx, amount='1'):
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
-        if not any([role in user_roles for role in ('Alive', 'Dead')]):
+        if 'Alive' not in user_roles:
             return
 
         if not amount.isdigit():
@@ -40,10 +40,10 @@ class Player:
             else:
                 await self.client.say(result)
 
-    @commands.group(pass_context=True)
+    @commands.command(pass_context=True)
     async def mine(self, ctx, amount='1'):
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
-        if not any([role in user_roles for role in ('Alive', 'Dead')]):
+        if 'Alive' not in user_roles:
             return
 
         if not amount.isdigit():
@@ -66,6 +66,43 @@ class Player:
                 await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
             else:
                 await self.client.say(result)
+
+    @commands.command(pass_context=True)
+    async def guard(self, ctx, amount='1', work_type=None):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Alive' not in user_roles:
+            return
+
+        if not amount.isdigit():
+            await self.client.say('Invalid command!')
+        else:
+            amount = int(amount)
+
+            if work_type == 'free':
+                result = await set_resources(self.client.db,
+                                             ctx.message.author,
+                                             {'energy': -amount},
+                                             {'defense': amount})
+            else:
+                result = await set_resources(self.client.db,
+                                             ctx.message.author,
+                                             {'scrap': amount, 'energy': -amount},
+                                             {'scrap': -amount, 'defense': amount})
+
+            if result is True:
+                if work_type == 'free':
+                    await self.client.say(f'The camp\'s defense increased by **{amount}**. '
+                                          f'You were working for free and earned no scrap.')
+                else:
+                    await self.client.say(f'The camp\'s defense increased by **{amount}**. '
+                                          f'You were given **{amount}** scrap as the payment.')
+                await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
+            else:
+                if 'scrap' in result:  # The camp doesn't have enough scrap to pay for guarding
+                    await self.client.say('The camp doesn\'t have enough scrap to pay for guarding.\n'
+                                          'If you would like to work for free, type `!guard <amount> free`.')
+                else:
+                    await self.client.say(result)
 
 
 def setup(client):
