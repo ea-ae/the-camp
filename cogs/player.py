@@ -30,7 +30,8 @@ class Player:
                 rank = 'None'
                 color = 0xffffff
 
-            result = await get_user_columns(self.client.db, ctx.message.author, 'xp', 'energy', 'last_energy', 'status')
+            result = await get_user_columns(self.client.db, ctx.message.author,
+                                            'xp', 'status', 'energy', 'last_energy', 'food')
             if result is False:
                 await self.client.say('Something went wrong!')
                 return
@@ -38,7 +39,9 @@ class Player:
             max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
             # We get the updated energy, but don't update it in the db, since it will be checked again anyway
 
-            last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
+            last_energy, energy = await update_user_energy(result['last_energy'],
+                                                           result['energy'],
+                                                           max_energy)
 
             embed = discord.Embed(title=ctx.message.author.display_name, color=color)
             embed.set_thumbnail(url=ctx.message.author.avatar_url)
@@ -77,7 +80,9 @@ class Player:
                        'View your available crafting recipes with `!craft`.')
 
         max_energy = 12
-        last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
+        last_energy, energy = await update_user_energy(result['last_energy'],
+                                                       result['energy'],
+                                                       max_energy)
 
         embed = discord.Embed(title='Your House', description=description, color=color)
         embed.add_field(name='Food', value=result['food'])

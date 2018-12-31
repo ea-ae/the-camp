@@ -12,7 +12,6 @@ async def get_user_roles(server, user):
 
 async def get_user_columns(db, user, *args):
     async def select_columns(conn):
-        # TODO: Automatically call update_user_energy() when needed?
         try:
             query = f'''SELECT {','.join(args)} FROM players WHERE user_id = $1;'''
             return await conn.fetchrow(query, user.id)
@@ -68,7 +67,12 @@ async def set_user_resources(db, user, columns, execute_query=True, user_result=
 
         if 'energy' in column_list:
             column_list.append('last_energy')
+            if not isinstance(columns['energy'], tuple):
+                if 'food' not in column_list:
+                    column_list.append('food')
+                columns['food'] = columns.get('food', 0) + columns['energy']  # Spend food equal to energy
 
+        print(f'=== COLUMNS === {str(columns)}')
         if user_result is None:
             query = f'''SELECT {','.join(column_list)} FROM players WHERE user_id = $1;'''
             result = dict(await conn.fetchrow(query, user.id))
@@ -80,11 +84,15 @@ async def set_user_resources(db, user, columns, execute_query=True, user_result=
             # TODO: Energy should also consume food
             max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
             print(f'*** energy before: {result["energy"]}')
-            last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
+
+            last_energy, energy = await update_user_energy(result['last_energy'],
+                                                           result['energy'],
+                                                           max_energy)
+
             print(f'*** energy after: {energy}')
             energy_gain = energy - result['energy']
             print(f'*** energy gain: {energy_gain}')
-            # TODO: Do we need the commented line below?
+
             result['energy'] += energy_gain
             if not isinstance(columns['energy'], tuple):  # Do not increase in case of absolute value
                 columns['energy'] += energy_gain
@@ -187,11 +195,15 @@ async def set_camp_resources(db, resources, execute_query=True, negative_to_zero
 
 
 async def update_user_energy(timestamp, energy, max_energy):
-    age = datetime.datetime.now() - timestamp
-    hours = age.days * 24 + age.seconds // 3600
-    leftover_time = age - datetime.timedelta(hours=hours)
-    new_energy = min(max_energy, energy + hours)
-    new_timestamp = datetime.datetime.now() - leftover_time
+    if isinstance(energy, tuple):
+        energy = energy[0]
+
+    age = datetime.datetime.now() - timestamp  # How much time has passed since last energy retrieval
+    hours = age.days * 24 + age.seconds // 3600  # Convert to hours
+    new_energy = min(max_energy, energy + hours)  # Add the energy
+    leftover_time = age - datetime.timedelta(hours=hours)  # Minutes/seconds left once hours subtracted
+    new_timestamp = datetime.datetime.now() - leftover_time  # Set the new timestamp
+
     return new_timestamp, new_energy
 
 

@@ -65,7 +65,7 @@ class Player:
 
         async with self.client.db.acquire() as conn:
             result = await get_user_columns(conn, ctx.message.author,
-                                            'inventory', 'materials', 'fuel', 'energy', 'last_energy')
+                                            'inventory', 'materials', 'fuel', 'energy', 'last_energy', 'food')
 
             mats = random.randrange(0, amount + 1)
             fuel = (amount - mats) * 10
@@ -80,11 +80,6 @@ class Player:
                                          {'materials': mats, 'fuel': fuel, 'energy': -amount},
                                          {'materials': mats, 'fuel': fuel},
                                          user_result=result)
-
-        # result = await set_resources(self.client.db,
-        #                              ctx.message.author,
-        #                              {'materials': mats, 'fuel': fuel, 'energy': -amount},
-        #                              {'materials': mats, 'fuel': fuel})
 
         if result is True:
             await self.client.say(
