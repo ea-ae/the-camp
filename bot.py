@@ -8,7 +8,7 @@ from config import *
 
 description = 'The Camp is a game about surviving together in a post-apocalypse world as long as possible.'
 command_prefix = '!'
-extensions = ['core', 'admin', 'camp', 'player', 'actions']
+extensions = ['events', 'core', 'admin', 'camp', 'player', 'actions']
 
 
 def run():
@@ -26,7 +26,7 @@ def run():
 
     print('Initializing bot...')
 
-    client = CampBot(db=db, description=description, command_prefix=command_prefix)
+    client = CampBot(db=db, loop=loop, description=description, command_prefix=command_prefix)
     client.remove_command('help')
     load_extensions(client)
 
@@ -50,6 +50,7 @@ class CampBot(commands.Bot):
     def __init__(self, **kwargs):
         super().__init__(description=kwargs.pop('description'), command_prefix=kwargs.pop('command_prefix'))
         self.db = kwargs.pop('db')
+        self.loop = kwargs.pop('loop')
         self.server = None
         self.channels = {}
 
