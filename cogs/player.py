@@ -33,20 +33,21 @@ class Player:
             result = await get_user_columns(self.client.db, ctx.message.author, 'xp', 'energy', 'last_energy', 'status')
             if result is False:
                 await self.client.say('Something went wrong!')
-            else:
-                max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
-                # We get the updated energy, but don't update it in the db, since it will be checked again anyway
+                return
 
-                last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
+            max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
+            # We get the updated energy, but don't update it in the db, since it will be checked again anyway
 
-                embed = discord.Embed(title=ctx.message.author.display_name, color=color)
-                embed.set_thumbnail(url=ctx.message.author.avatar_url)
-                embed.add_field(name='Rank', value=rank)
-                embed.add_field(name='XP', value=f'{result["xp"]} XP')
-                embed.add_field(name='Health', value=result['status'].capitalize())
-                embed.add_field(name='Energy', value=f'{energy}/{max_energy}')
+            last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
 
-                await self.client.say(embed=embed)
+            embed = discord.Embed(title=ctx.message.author.display_name, color=color)
+            embed.set_thumbnail(url=ctx.message.author.avatar_url)
+            embed.add_field(name='Rank', value=rank)
+            embed.add_field(name='XP', value=f'{result["xp"]} XP')
+            embed.add_field(name='Health', value=result['status'].capitalize())
+            embed.add_field(name='Energy', value=f'{energy}/{max_energy}')
+
+            await self.client.say(embed=embed)
 
     @commands.command(pass_context=True, aliases=['house', 'inventory'])
     async def home(self, ctx):
@@ -68,25 +69,17 @@ class Player:
             self.client.db, ctx.message.author,
             'food', 'fuel', 'medicine', 'materials', 'scrap', 'energy', 'last_energy'
         )
+        if result is False:
+            await self.client.say('Something went wrong!')
+            return
 
         description = ('View your available house upgrades with `!build`.\n'
                        'View your available crafting recipes with `!craft`.')
-
-        house_upgrades = ('**Safe (0/3)** - Protect your belongings from thieves.\n'
-                          '**Heater (0/3)** - Conserve fuel when heating your house.\n'
-                          '**Reinforcements (0/3)** - Protect your house from any attacks.\n')
-
-        inventory = ('You don\'t have any items in your inventory.'
-                     '')
 
         max_energy = 12
         last_energy, energy = await update_user_energy(result['last_energy'], result['energy'], max_energy)
 
         embed = discord.Embed(title='Your House', description=description, color=color)
-
-        embed.add_field(name='House Upgrades', value=house_upgrades, inline=False)
-        embed.add_field(name='Inventory', value=inventory, inline=False)
-
         embed.add_field(name='Food', value=result['food'])
         embed.add_field(name='Fuel', value=result['fuel'])
         embed.add_field(name='Medicine', value=result['medicine'])
@@ -98,40 +91,66 @@ class Player:
 
     @commands.command(pass_context=True)
     async def build(self, ctx, upgrade=None):
-        upgrade_costs = {
-            'safe': [10, 20, 50],
-            'heater': [15, 30, 60],
-            'reinforcements': [25, 50, 100]
+        upgrade_list = {
+            'safe': {
+                'cost': [10, 20, 50],
+                'description': 'Protect your belongings from thieves'
+            },
+            'heater': {
+                'cost': [15, 30, 60],
+                'description': 'Conserve fuel when heating your house'
+            },
+            'reinforcements': {
+                'cost': [25, 50, 100],
+                'description': 'Protect your house from any attacks'
+            }
         }
 
         if upgrade is None:
             result = await get_user_columns(self.client.db, ctx.message.author, 'house_upgrades')
+            if result is False:
+                await self.client.say('Something went wrong!')
+                return
+
             upgrades = json.loads(result['house_upgrades'])
 
-            await self.client.say(
-                f'Build an house upgrade by typing `!build <upgrade_name>`.\n\n'
-                f'**Safe ({upgrades.get("safe", 0)}/3)** - Protect your belongings from thieves '
-                f'({upgrade_costs["safe"][upgrades.get("safe", 0)]} materials).\n'
-                f'**Heater ({upgrades.get("heater", 0)}/3)** - Conserve fuel when heating your house '
-                f'({upgrade_costs["heater"][upgrades.get("heater", 0)]} materials).\n'
-                f'**Reinforcements ({upgrades.get("reinforcements", 0)}/3)** - Protect your house from attacks '
-                f'({upgrade_costs["reinforcements"][upgrades.get("reinforcements", 0)]} materials).\n')
-        elif upgrade.lower() in upgrade_costs.keys(): 
-            # Kind of inefficient (two SELECT queries for the same row are made), but who cares anyway
-            upgrade = upgrade.lower()
-            result = await get_user_columns(self.client.db, ctx.message.author, 'house_upgrades')
-            upgrades = json.loads(result['house_upgrades'])
-            cost = upgrade_costs[upgrade][upgrades.get(upgrade, 0)]
+            upgrade_msg = 'Build an house upgrade by typing `!build <upgrade_name>`.\n\n'
+            for key, value in upgrade_list.items():
+                if upgrades.get(key, 0) >= len(upgrade_list[key]['cost']):
+                    cost = ''
+                else:
+                    cost = f' ({upgrade_list[key]["cost"][upgrades.get(key, 0)]} materials)'
+                upgrade_msg += (
+                    f'**{key.capitalize()} ({upgrades.get(key, 0)}/{len(upgrade_list[key]["cost"])})** - '
+                    f'{upgrade_list[key]["description"]}{cost}.\n'
+                )
 
-            result = await set_user_resources(self.client.db, ctx.message.author, {'materials': -cost})
+            await self.client.say(upgrade_msg)
+        elif upgrade.lower() in upgrade_list.keys(): 
+            # Kind of inefficient (two SELECT queries for the same row are made), but whatever
+            async with self.client.db.acquire() as conn:
+                upgrade = upgrade.lower()
+                result = await get_user_columns(conn, ctx.message.author, 'materials', 'house_upgrades')
+                upgrades = json.loads(result['house_upgrades'])
 
-            if type(result) is str:
-                await self.client.say(result)
-            else:
-                await self.client.say(f'You have upgraded the **{upgrade}** to level '
-                                      f'**{upgrades.get(upgrade, 0) + 1}** for **{cost}** materials.')
+                if upgrades.get(upgrade, 0) >= len(upgrade_list[upgrade]['cost']):
+                    await self.client.say('This upgrade is already at maximum level.')
+                else:
+                    cost = upgrade_list[upgrade]['cost'][upgrades.get(upgrade, 0)]
+                    upgrades[upgrade] = upgrades.get(upgrade, 0) + 1
+
+                    result = await set_user_resources(
+                        conn, ctx.message.author, 
+                        {'materials': -cost, 'house_upgrades': (json.dumps(upgrades), False)}
+                    )
+
+                    if type(result) is str:
+                        await self.client.say(result)
+                    else:
+                        await self.client.say(f'You have upgraded the **{upgrade}** to level '
+                                            f'**{upgrades[upgrade]}** for **{cost}** materials.')
         else:
-            await self.client.say('No upgrades with such a name exist! Type `!build` for a list of upgrades.')
+            await self.client.say('An upgrade with such a name doesn\'t exist! Type `!build` for a list of upgrades.')
 
 def setup(client):
     client.add_cog(Player(client))

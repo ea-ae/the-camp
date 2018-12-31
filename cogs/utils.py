@@ -55,10 +55,8 @@ async def set_resources(db, user, columns, resources, negative_to_zero=False):
     result = 'Something went wrong!'
     if type(db) == Pool:
         async with db.acquire() as c:
-            print('1')
             result = await run_queries(c)
     elif type(db) == PoolConnectionProxy:
-        print('2')
         result = await run_queries(db)
     return result
 
@@ -90,7 +88,10 @@ async def set_user_resources(db, user, columns, execute_query=True):
         sets = []
         for key, value in columns.items():
             if isinstance(value, tuple) and value[1] is False:  # Absolute
-                sets.append(f'{key} = {value[0]}')
+                if isinstance(value[0], str):
+                    sets.append(f'{key} = \'{value[0]}\'')
+                else:
+                    sets.append(f'{key} = {value[0]}')
             else:  # Relative
                 if result[key] < value * -1:  # Would result in a negative number
                     return f'You don\'t have enough {key}.'
@@ -106,7 +107,6 @@ async def set_user_resources(db, user, columns, execute_query=True):
                 else:
                     query = f'''UPDATE players SET {','.join(sets)} WHERE user_id = $1'''
                     await conn.execute(query, user.id)
-                print(f'Executed query:\n{query}')
             except Exception as e:
                 await tr.rollback()
                 print(e)
@@ -143,8 +143,6 @@ async def set_camp_resources(db, resources, execute_query=True, negative_to_zero
 
         query = f'''SELECT name, value FROM global WHERE {' OR '.join(camp_list)};'''
         results = await conn.fetch(query)
-        print('camp results: ')
-        print(results)
 
         q = ''''''
         for result in results:
@@ -193,8 +191,6 @@ async def update_user_energy(timestamp, energy, max_energy):
 
 
 async def update_camp_status(client, reset_camp_data=False):
-    print('Updating camp status...')
-
     async with client.db.acquire() as conn:
         if reset_camp_data:
             query = '''INSERT INTO global VALUES ('temp', -30) ON CONFLICT (name) DO UPDATE SET value = -30;
@@ -208,7 +204,6 @@ async def update_camp_status(client, reset_camp_data=False):
         try:
             query = '''SELECT * FROM global'''
             result = dict(await conn.fetch(query))
-            print(result)
         except Exception as e:
             print(e)
             return
