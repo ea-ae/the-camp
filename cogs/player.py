@@ -144,7 +144,7 @@ class Player:
                         user_result=result
                     )
 
-                    if type(result) is str:
+                    if type(result) is str:  # Error
                         await self.client.say(result)
                     else:
                         await self.client.say(f'You have upgraded the **{upgrade}** to level '
@@ -153,13 +153,13 @@ class Player:
             await self.client.say('An upgrade with such a name doesn\'t exist! Type `!build` for a list of upgrades.')
 
     @commands.command(pass_context=True)
-    async def craft(self, ctx, item=None):
+    async def craft(self, ctx, item=None, amount='1'):
         items_list = {
             'heatarmor': {
                 'name': 'Heat Armor',
                 'desc': 'Heat armor warms you in extremely cold environments. It is required for scavenging',
                 'cost': {
-                    'scrap': 100
+                    'scrap': 50
                 }
             },
             'powercell': {
@@ -172,7 +172,7 @@ class Player:
             },
             'farmwagon': {
                 'name': 'Farm Wagon',
-                'desc': 'Farm wagons let you haul larger amounts of food at once, earning you double the food',
+                'desc': 'Farm wagons let you haul larger amounts of food at once, earning you double the resources',
                 'cost': {
                     'materials': 100
                 }
@@ -205,6 +205,32 @@ class Player:
                 inv_msg += f'**{value["name"]} ({inventory.get(key, 0)}x)** - {value["desc"]} ({", ".join(cost)}).\n'
 
             await self.client.say(inv_msg)
+        elif item.lower() in items_list.keys():
+            if not amount.isdigit():
+                await self.client.say('Invalid command!')
+                return
+            amount = int(amount)
+
+            async with self.client.db.acquire() as conn:
+                item = item.lower()
+
+                resources_required = [resource[0] for resource in items_list[item]['cost'].items()]
+                result = dict(await get_user_columns(conn, ctx.message.author, 'inventory', *resources_required))
+
+                inventory = json.loads(result['inventory'])
+                inventory[item] = inventory.get(item, 0) + amount
+
+                cost = items_list[item]['cost']
+                for key, value in cost.items():
+                    cost[key] = value * -amount
+                cost['inventory'] = (json.dumps(inventory), False)
+
+                result = await set_user_resources(conn, ctx.message.author, cost, user_result=result)
+
+                if type(result) is str:  # Error
+                    await self.client.say(result)
+                else:
+                    await self.client.say(f'You have crafted the item{"s" if amount > 1 else ""} successfully!')
         else:
             await self.client.say('An item with such a name doesn\'t exist! Type `!craft` for a list of items.')
 
