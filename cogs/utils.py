@@ -72,7 +72,6 @@ async def set_user_resources(db, user, columns, execute_query=True, user_result=
                     column_list.append('food')
                 columns['food'] = columns.get('food', 0) + columns['energy']  # Spend food equal to energy
 
-        print(f'=== COLUMNS === {str(columns)}')
         if user_result is None:
             query = f'''SELECT {','.join(column_list)} FROM players WHERE user_id = $1;'''
             result = dict(await conn.fetchrow(query, user.id))
@@ -83,15 +82,16 @@ async def set_user_resources(db, user, columns, execute_query=True, user_result=
         if 'energy' in column_list:
             # TODO: Energy should also consume food
             max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
-            print(f'*** energy before: {result["energy"]}')
 
             last_energy, energy = await update_user_energy(result['last_energy'],
                                                            result['energy'],
                                                            max_energy)
 
-            print(f'*** energy after: {energy}')
             energy_gain = energy - result['energy']
-            print(f'*** energy gain: {energy_gain}')
+
+            # print(f'*** energy before: {result["energy"]}')
+            # print(f'*** energy after: {energy}')
+            # print(f'*** energy gain: {energy_gain}')
 
             result['energy'] += energy_gain
             if not isinstance(columns['energy'], tuple):  # Do not increase in case of absolute value
@@ -136,7 +136,7 @@ async def set_user_resources(db, user, columns, execute_query=True, user_result=
             else:
                 return {
                     'query': f'''UPDATE players SET {','.join(sets)} WHERE user_id = $1''',
-                    'args': [user_id]
+                    'args': [user.id]
                 }
 
     status = 'Something went wrong!'
@@ -212,9 +212,9 @@ async def update_camp_status(client, reset_camp_data=False):
         if reset_camp_data:
             query = '''INSERT INTO global VALUES ('temp', -30) ON CONFLICT (name) DO UPDATE SET value = -30;
             INSERT INTO global VALUES ('defense', 100) ON CONFLICT (name) DO UPDATE SET value = 1000;
-            INSERT INTO global VALUES ('food', 200) ON CONFLICT (name) DO UPDATE SET value = 200;
+            INSERT INTO global VALUES ('food', 500) ON CONFLICT (name) DO UPDATE SET value = 500;
             INSERT INTO global VALUES ('fuel', 1000) ON CONFLICT (name) DO UPDATE SET value = 1000;
-            INSERT INTO global VALUES ('medicine', 100) ON CONFLICT (name) DO UPDATE SET value = 100;
+            INSERT INTO global VALUES ('medicine', 10) ON CONFLICT (name) DO UPDATE SET value = 10;
             INSERT INTO global VALUES ('materials', 0) ON CONFLICT (name) DO UPDATE SET value = 0;
             INSERT INTO global VALUES ('scrap', 500) ON CONFLICT (name) DO UPDATE SET value = 500;'''
             await conn.execute(query)

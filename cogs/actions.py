@@ -29,24 +29,21 @@ class Player:
         async with self.client.db.acquire() as conn:
             result = await get_user_columns(conn, ctx.message.author, 'inventory', 'food', 'energy', 'last_energy')
 
-            camp_food = amount
-            personal_food = amount
+            food = amount
 
             inventory = json.loads(result['inventory'])
             if inventory.get('farmwagon', 0) > 0:
-                camp_food *= 2
-                personal_food *= 2
+                food *= 2
 
             result = await set_resources(conn,
                                          ctx.message.author,
-                                         {'food': personal_food, 'energy': -amount},
-                                         {'food': camp_food},
+                                         {'food': food, 'energy': -amount},
+                                         {'food': food},
                                          user_result=result)
 
         if result is True:
             await self.client.say(
-                f'You earned **{camp_food}** food ration{"s" if camp_food > 1 else ""} for the camp '
-                f'and **{personal_food}** food ration{"s" if personal_food > 1 else ""} for yourself.')
+                f'You earned **{food}** food ration{"s" if food > 1 else ""} for both yourself and the camp.')
             await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
         else:
             await self.client.say(result)

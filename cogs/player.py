@@ -1,8 +1,14 @@
 import discord
 from discord.ext import commands
 import json
+import datetime
 
-from .utils import get_user_roles, update_user_energy, get_user_columns, set_user_resources
+from .utils import (get_user_roles,
+                    update_user_energy,
+                    get_user_columns,
+                    set_user_resources,
+                    set_resources,
+                    update_camp_status)
 
 
 class Player:
@@ -56,7 +62,7 @@ class Player:
     async def home(self, ctx):
         # TODO: Perhaps xp/energy should also be included in this command?
         user_roles = await get_user_roles(self.client.server, ctx.message.author)
-        if not any([role in user_roles for role in ('Alive', 'Dead')]):
+        if 'Alive' not in user_roles:
             return
 
         if 'Professional' in user_roles:
@@ -96,6 +102,10 @@ class Player:
 
     @commands.command(pass_context=True)
     async def build(self, ctx, upgrade=None):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Alive' not in user_roles:
+            return
+
         upgrade_list = {
             'safe': {
                 'cost': [10, 20, 50],
@@ -159,6 +169,10 @@ class Player:
 
     @commands.command(pass_context=True)
     async def craft(self, ctx, item=None, amount='1'):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Alive' not in user_roles:
+            return
+
         items_list = {
             'heatarmor': {
                 'name': 'Heat Armor',
@@ -238,6 +252,37 @@ class Player:
                     await self.client.say(f'You have crafted the item{"s" if amount > 1 else ""} successfully!')
         else:
             await self.client.say('An item with such a name doesn\'t exist! Type `!craft` for a list of items.')
+
+    @commands.command(pass_context=True)
+    async def daily(self, ctx):
+        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        if 'Alive' not in user_roles:
+            return
+
+        async with self.client.db.acquire() as conn:
+            result = dict(await get_user_columns(conn, ctx.message.author, 'last_daily', 'food'))
+            if result['last_daily'] is None:
+                result['last_daily'] = datetime.datetime.now() - datetime.timedelta(days=2)
+
+            age = datetime.datetime.now() - result['last_daily']  # How much time has passed
+            r = datetime.timedelta(days=1) - age  # Time remaining
+
+            days, hours, minutes = r.days, r.seconds // 3600, r.seconds // 60 % 60
+
+            if age < datetime.timedelta(days=1):
+                await self.client.say(f'You have to wait {hours} hour{"s" if hours != 1 else ""} and '
+                                      f'{minutes} minute{"s" if minutes != 1 else ""} for the next daily pack.')
+                return
+
+            result = await set_resources(conn, ctx.message.author,
+                                         {'food': 24, 'last_daily': (str(datetime.datetime.now()), False)},
+                                         {'food': -24}, user_result=result)
+
+            if type(result) is str:  # Error
+                await self.client.say(result)
+            else:
+                await self.client.say('You have redeemed your daily **24** food rations from the camp\'s warehouse.')
+                await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
 
 
 def setup(client):

@@ -39,6 +39,7 @@ class Core:
             '`!help` - Show this list of commands.\n'
             '`!join` - Join a new game.\n'
             '\n**Player Commands**\n'
+            '`!daily` - Get your daily food rations from the camp.\n'
             '`!status` - View information about your character.\n'
             '`!home` - View your resources and home status.\n'
             '`!build` - View a list of possible house upgrades.\n'
