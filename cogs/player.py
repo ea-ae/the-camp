@@ -126,8 +126,7 @@ class Player:
                 )
 
             await self.client.say(upgrade_msg)
-        elif upgrade.lower() in upgrade_list.keys(): 
-            # Kind of inefficient (two SELECT queries for the same row are made), but whatever
+        elif upgrade.lower() in upgrade_list.keys():
             async with self.client.db.acquire() as conn:
                 upgrade = upgrade.lower()
                 result = await get_user_columns(conn, ctx.message.author, 'materials', 'house_upgrades')
@@ -141,7 +140,8 @@ class Player:
 
                     result = await set_user_resources(
                         conn, ctx.message.author, 
-                        {'materials': -cost, 'house_upgrades': (json.dumps(upgrades), False)}
+                        {'materials': -cost, 'house_upgrades': (json.dumps(upgrades), False)},
+                        user_result=result
                     )
 
                     if type(result) is str:
@@ -196,7 +196,7 @@ class Player:
             inventory = json.loads(result['inventory'])
 
             inv_msg = ('Craft an item by typing `!craft <item_name> <amount>`. '
-                             'Type the item\'s name without any spaces, e.g. `!craft heatarmor`.\n\n')
+                       'Type the item\'s name without any spaces, e.g. `!craft heatarmor`.\n\n')
             for key, value in items_list.items():
                 cost = []
                 for resource_name, resource_amount in value["cost"].items():
@@ -205,29 +205,6 @@ class Player:
                 inv_msg += f'**{value["name"]} ({inventory.get(key, 0)}x)** - {value["desc"]} ({", ".join(cost)}).\n'
 
             await self.client.say(inv_msg)
-        # elif upgrade.lower() in upgrade_list.keys():
-        #     # Kind of inefficient (two SELECT queries for the same row are made), but whatever
-        #     async with self.client.db.acquire() as conn:
-        #         upgrade = upgrade.lower()
-        #         result = await get_user_columns(conn, ctx.message.author, 'materials', 'house_upgrades')
-        #         upgrades = json.loads(result['house_upgrades'])
-        #
-        #         if upgrades.get(upgrade, 0) >= len(upgrade_list[upgrade]['cost']):
-        #             await self.client.say('This upgrade is already at maximum level.')
-        #         else:
-        #             cost = upgrade_list[upgrade]['cost'][upgrades.get(upgrade, 0)]
-        #             upgrades[upgrade] = upgrades.get(upgrade, 0) + 1
-        #
-        #             result = await set_user_resources(
-        #                 conn, ctx.message.author,
-        #                 {'materials': -cost, 'house_upgrades': (json.dumps(upgrades), False)}
-        #             )
-        #
-        #             if type(result) is str:
-        #                 await self.client.say(result)
-        #             else:
-        #                 await self.client.say(f'You have upgraded the **{upgrade}** to level '
-        #                                       f'**{upgrades[upgrade]}** for **{cost}** materials.')
         else:
             await self.client.say('An item with such a name doesn\'t exist! Type `!craft` for a list of items.')
 

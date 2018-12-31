@@ -29,13 +29,13 @@ async def get_user_columns(db, user, *args):
     return result
 
 
-async def set_resources(db, user, columns, resources, negative_to_zero=False):
+async def set_resources(db, user, columns, resources, user_result=None, negative_to_zero=False):
     async def run_queries(conn):
         camp_query = await set_camp_resources(conn, resources, False, negative_to_zero)
         if type(camp_query) is str:  # Error
             return camp_query
 
-        user_query = await set_user_resources(conn, user, columns, False)
+        user_query = await set_user_resources(conn, user, columns, False, user_result)
         if type(user_query) is str:  # Error
             return user_query
 
@@ -61,7 +61,7 @@ async def set_resources(db, user, columns, resources, negative_to_zero=False):
     return result
 
 
-async def set_user_resources(db, user, columns, execute_query=True):
+async def set_user_resources(db, user, columns, execute_query=True, user_result=None):
     async def update_columns(conn):
         last_energy = None
         column_list = list(columns.keys())
@@ -69,8 +69,11 @@ async def set_user_resources(db, user, columns, execute_query=True):
         if 'energy' in column_list:
             column_list.append('last_energy')
 
-        query = f'''SELECT {','.join(column_list)} FROM players WHERE user_id = $1;'''
-        result = dict(await conn.fetchrow(query, user.id))  # We have to edit this data, so make it a dict... or do we?
+        if user_result is None:
+            query = f'''SELECT {','.join(column_list)} FROM players WHERE user_id = $1;'''
+            result = dict(await conn.fetchrow(query, user.id))
+        else:
+            result = dict(user_result)
 
         # If the energy column is affected, then first update it
         if 'energy' in column_list:
@@ -82,8 +85,9 @@ async def set_user_resources(db, user, columns, execute_query=True):
             energy_gain = energy - result['energy']
             print(f'*** energy gain: {energy_gain}')
             # TODO: Do we need the commented line below?
-            # result['energy'] += energy_gain
-            columns['energy'] += energy_gain
+            result['energy'] += energy_gain
+            if not isinstance(columns['energy'], tuple):  # Do not increase in case of absolute value
+                columns['energy'] += energy_gain
 
         # Generate the query
         sets = []
