@@ -152,6 +152,85 @@ class Player:
         else:
             await self.client.say('An upgrade with such a name doesn\'t exist! Type `!build` for a list of upgrades.')
 
+    @commands.command(pass_context=True)
+    async def craft(self, ctx, item=None):
+        items_list = {
+            'heatarmor': {
+                'name': 'Heat Armor',
+                'desc': 'Heat armor warms you in extremely cold environments. It is required for scavenging',
+                'cost': {
+                    'scrap': 100
+                }
+            },
+            'powercell': {
+                'name': 'Power Cell',
+                'desc': 'Heat armor requires power cells. One power cell is spent on every expedition',
+                'cost': {
+                    'scrap': 10,
+                    'fuel': 50
+                }
+            },
+            'farmwagon': {
+                'name': 'Farm Wagon',
+                'desc': 'Farm wagons let you haul larger amounts of food at once, earning you double the food',
+                'cost': {
+                    'materials': 100
+                }
+            },
+            'miningdrill': {
+                'name': 'Mining Drill',
+                'desc': 'Mining drills make mining double as fast, earning you double the resources',
+                'cost': {
+                    'scrap': 100,
+                    'fuel': 100
+                }
+            }
+        }
+
+        if item is None:
+            result = await get_user_columns(self.client.db, ctx.message.author, 'inventory')
+            if result is False:
+                await self.client.say('Something went wrong!')
+                return
+
+            inventory = json.loads(result['inventory'])
+
+            inv_msg = ('Craft an item by typing `!craft <item_name> <amount>`. '
+                             'Type the item\'s name without any spaces, e.g. `!craft heatarmor`.\n\n')
+            for key, value in items_list.items():
+                cost = []
+                for resource_name, resource_amount in value["cost"].items():
+                    cost.append(f'{resource_amount} {resource_name}')
+
+                inv_msg += f'**{value["name"]} ({inventory.get(key, 0)}x)** - {value["desc"]} ({", ".join(cost)}).\n'
+
+            await self.client.say(inv_msg)
+        # elif upgrade.lower() in upgrade_list.keys():
+        #     # Kind of inefficient (two SELECT queries for the same row are made), but whatever
+        #     async with self.client.db.acquire() as conn:
+        #         upgrade = upgrade.lower()
+        #         result = await get_user_columns(conn, ctx.message.author, 'materials', 'house_upgrades')
+        #         upgrades = json.loads(result['house_upgrades'])
+        #
+        #         if upgrades.get(upgrade, 0) >= len(upgrade_list[upgrade]['cost']):
+        #             await self.client.say('This upgrade is already at maximum level.')
+        #         else:
+        #             cost = upgrade_list[upgrade]['cost'][upgrades.get(upgrade, 0)]
+        #             upgrades[upgrade] = upgrades.get(upgrade, 0) + 1
+        #
+        #             result = await set_user_resources(
+        #                 conn, ctx.message.author,
+        #                 {'materials': -cost, 'house_upgrades': (json.dumps(upgrades), False)}
+        #             )
+        #
+        #             if type(result) is str:
+        #                 await self.client.say(result)
+        #             else:
+        #                 await self.client.say(f'You have upgraded the **{upgrade}** to level '
+        #                                       f'**{upgrades[upgrade]}** for **{cost}** materials.')
+        else:
+            await self.client.say('An item with such a name doesn\'t exist! Type `!craft` for a list of items.')
+
 
 def setup(client):
     client.add_cog(Player(client))
