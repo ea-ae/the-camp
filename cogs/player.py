@@ -148,9 +148,10 @@ class Player:
                         await self.client.say(result)
                     else:
                         await self.client.say(f'You have upgraded the **{upgrade}** to level '
-                                            f'**{upgrades[upgrade]}** for **{cost}** materials.')
+                                              f'**{upgrades[upgrade]}** for **{cost}** materials.')
         else:
             await self.client.say('An upgrade with such a name doesn\'t exist! Type `!build` for a list of upgrades.')
+
 
 def setup(client):
     client.add_cog(Player(client))

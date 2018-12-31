@@ -85,5 +85,6 @@ class Admin:
             else:
                 await update_camp_status(self.client)
 
+
 def setup(client):
     client.add_cog(Admin(client))

@@ -31,7 +31,7 @@ async def get_user_columns(db, user, *args):
 
 async def set_resources(db, user, columns, resources, negative_to_zero=False):
     async def run_queries(conn):
-        camp_query = await set_camp_resources(conn, resources, False)
+        camp_query = await set_camp_resources(conn, resources, False, negative_to_zero)
         if type(camp_query) is str:  # Error
             return camp_query
 
@@ -70,7 +70,7 @@ async def set_user_resources(db, user, columns, execute_query=True):
             column_list.append('last_energy')
 
         query = f'''SELECT {','.join(column_list)} FROM players WHERE user_id = $1;'''
-        result = dict(await conn.fetchrow(query, user.id))  # We have to edit this data, so make it a dict
+        result = dict(await conn.fetchrow(query, user.id))  # We have to edit this data, so make it a dict... or do we?
 
         # If the energy column is affected, then first update it
         if 'energy' in column_list:
@@ -81,8 +81,9 @@ async def set_user_resources(db, user, columns, execute_query=True):
             print(f'*** energy after: {energy}')
             energy_gain = energy - result['energy']
             print(f'*** energy gain: {energy_gain}')
-            result['energy'] += energy_gain
-            # columns['energy'] += energy_gain
+            # TODO: Do we need the commented line below?
+            # result['energy'] += energy_gain
+            columns['energy'] += energy_gain
 
         # Generate the query
         sets = []
@@ -103,7 +104,7 @@ async def set_user_resources(db, user, columns, execute_query=True):
             try:
                 if 'energy' in column_list:
                     query = f'''UPDATE players SET {','.join(sets)}, last_energy = $1 WHERE user_id = $2'''
-                    row = await conn.execute(query, last_energy, user.id)
+                    await conn.execute(query, last_energy, user.id)
                 else:
                     query = f'''UPDATE players SET {','.join(sets)} WHERE user_id = $1'''
                     await conn.execute(query, user.id)
@@ -183,7 +184,7 @@ async def set_camp_resources(db, resources, execute_query=True, negative_to_zero
 
 async def update_user_energy(timestamp, energy, max_energy):
     age = datetime.datetime.now() - timestamp
-    hours = age.seconds // 3600
+    hours = age.days * 24 + age.seconds // 3600
     leftover_time = age - datetime.timedelta(hours=hours)
     new_energy = min(max_energy, energy + hours)
     new_timestamp = datetime.datetime.now() - leftover_time
