@@ -224,7 +224,8 @@ async def update_camp_status(client, reset_camp_data=False):
         except Exception as e:
             print(e)
             return
-
+            
+    # TODO: Only update camp resources if a self.camp_resources_changed is True
     status_embed = Embed(color=0x128f39)
     status_embed.add_field(name='Temperature', value=f'{result["temp"]}°C', inline=False)
     status_embed.add_field(name='Defense Points', value=result["defense"], inline=False)

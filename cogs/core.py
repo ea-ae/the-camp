@@ -18,8 +18,8 @@ class Core:
         for channel in self.client.server.channels:
             self.client.channels[channel.name] = self.client.get_channel(channel.id)
 
-        events_cog = self.client.get_cog('Events')
-        await events_cog.configure_scheduler()
+        # events_cog = self.client.get_cog('Events')
+        # await events_cog.configure_scheduler()
 
         await self.client.change_presence(game=discord.Game(name='Survived for 0 days'))
         print(f'Ready!\nUser: {self.client.user.name} ({self.client.user.id})\n'

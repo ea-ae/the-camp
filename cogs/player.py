@@ -83,12 +83,12 @@ class Player:
             return
 
         description = ('View your available house upgrades with `!build`.\n'
-                       'View your available crafting recipes with `!craft`.')
+                    'View your available crafting recipes with `!craft`.')
 
         max_energy = 12
         last_energy, energy = await update_user_energy(result['last_energy'],
-                                                       result['energy'],
-                                                       max_energy)
+                                                    result['energy'],
+                                                    max_energy)
 
         embed = discord.Embed(title='Your House', description=description, color=color)
         embed.add_field(name='Food', value=result['food'])

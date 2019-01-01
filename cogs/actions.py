@@ -44,7 +44,6 @@ class Player:
         if result is True:
             await self.client.say(
                 f'You earned **{food}** food ration{"s" if food > 1 else ""} for both yourself and the camp.')
-            await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
         else:
             await self.client.say(result)
 
@@ -82,7 +81,6 @@ class Player:
             await self.client.say(
                 f'You earned **{mats}** material{"s" if mats > 1 or mats == 0 else ""} and '
                 f'**{fuel}** fuel for both yourself and the camp.')
-            await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
         else:
             await self.client.say(result)
 
@@ -116,7 +114,6 @@ class Player:
             else:
                 await self.client.say(f'The camp\'s defense increased by **{amount}**. '
                                       f'You were given **{amount}** scrap as payment.')
-            await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
         else:
             if 'scrap' in result:  # The camp doesn't have enough scrap to pay for guarding
                 await self.client.say('The camp doesn\'t have enough scrap to pay for guarding.\n'
