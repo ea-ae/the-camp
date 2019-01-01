@@ -3,13 +3,6 @@ from discord.ext import commands
 import json
 import datetime
 
-from .utils import (get_user_roles,
-                    update_user_energy,
-                    get_user_columns,
-                    set_user_resources,
-                    set_resources,
-                    update_camp_status)
-
 
 class Player:
     """
@@ -21,7 +14,7 @@ class Player:
 
     @commands.command(pass_context=True)
     async def status(self, ctx):
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if any([role in user_roles for role in ('Alive', 'Dead')]):
             if 'Professional' in user_roles:
                 rank = 'Professional'
@@ -36,8 +29,8 @@ class Player:
                 rank = 'None'
                 color = 0xffffff
 
-            result = await get_user_columns(self.client.db, ctx.message.author,
-                                            'xp', 'status', 'energy', 'last_energy', 'food')
+            result = await self.client.utils.get_user_columns(self.client.db, ctx.message.author,
+                                                              'xp', 'status', 'energy', 'last_energy', 'food')
             if result is False:
                 await self.client.say('Something went wrong!')
                 return
@@ -45,9 +38,9 @@ class Player:
             max_energy = 12  # Make max energy upgradable later on in the game (and keep it in the db)
             # We get the updated energy, but don't update it in the db, since it will be checked again anyway
 
-            last_energy, energy = await update_user_energy(result['last_energy'],
-                                                           result['energy'],
-                                                           max_energy)
+            last_energy, energy = await self.client.utils.update_user_energy(result['last_energy'],
+                                                                             result['energy'],
+                                                                             max_energy)
 
             embed = discord.Embed(title=ctx.message.author.display_name, color=color)
             embed.set_thumbnail(url=ctx.message.author.avatar_url)
@@ -61,7 +54,7 @@ class Player:
     @commands.command(pass_context=True, aliases=['house', 'inventory'])
     async def home(self, ctx):
         # TODO: Perhaps xp/energy should also be included in this command?
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Alive' not in user_roles:
             return
 
@@ -74,7 +67,7 @@ class Player:
         else:
             color = 0xffffff
 
-        result = await get_user_columns(
+        result = await self.client.utils.get_user_columns(
             self.client.db, ctx.message.author,
             'food', 'fuel', 'medicine', 'materials', 'scrap', 'energy', 'last_energy'
         )
@@ -83,12 +76,12 @@ class Player:
             return
 
         description = ('View your available house upgrades with `!build`.\n'
-                    'View your available crafting recipes with `!craft`.')
+                       'View your available crafting recipes with `!craft`.')
 
         max_energy = 12
-        last_energy, energy = await update_user_energy(result['last_energy'],
-                                                    result['energy'],
-                                                    max_energy)
+        last_energy, energy = await self.client.utils.update_user_energy(result['last_energy'],
+                                                                         result['energy'],
+                                                                         max_energy)
 
         embed = discord.Embed(title='Your House', description=description, color=color)
         embed.add_field(name='Food', value=result['food'])
@@ -102,7 +95,7 @@ class Player:
 
     @commands.command(pass_context=True)
     async def build(self, ctx, upgrade=None):
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Alive' not in user_roles:
             return
 
@@ -122,7 +115,7 @@ class Player:
         }
 
         if upgrade is None:
-            result = await get_user_columns(self.client.db, ctx.message.author, 'house_upgrades')
+            result = await self.client.utils.get_user_columns(self.client.db, ctx.message.author, 'house_upgrades')
             if result is False:
                 await self.client.say('Something went wrong!')
                 return
@@ -144,7 +137,9 @@ class Player:
         elif upgrade.lower() in upgrade_list.keys():
             async with self.client.db.acquire() as conn:
                 upgrade = upgrade.lower()
-                result = await get_user_columns(conn, ctx.message.author, 'materials', 'house_upgrades')
+                result = await self.client.utils.get_user_columns(conn, ctx.message.author,
+                                                                  'materials',
+                                                                  'house_upgrades')
                 upgrades = json.loads(result['house_upgrades'])
 
                 if upgrades.get(upgrade, 0) >= len(upgrade_list[upgrade]['cost']):
@@ -153,7 +148,7 @@ class Player:
                     cost = upgrade_list[upgrade]['cost'][upgrades.get(upgrade, 0)]
                     upgrades[upgrade] = upgrades.get(upgrade, 0) + 1
 
-                    result = await set_user_resources(
+                    result = await self.client.utils.set_user_resources(
                         conn, ctx.message.author, 
                         {'materials': -cost, 'house_upgrades': (json.dumps(upgrades), False)},
                         user_result=result
@@ -169,7 +164,7 @@ class Player:
 
     @commands.command(pass_context=True)
     async def craft(self, ctx, item=None, amount='1'):
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Alive' not in user_roles:
             return
 
@@ -207,7 +202,7 @@ class Player:
         }
 
         if item is None:
-            result = await get_user_columns(self.client.db, ctx.message.author, 'inventory')
+            result = await self.client.utils.get_user_columns(self.client.db, ctx.message.author, 'inventory')
             if result is False:
                 await self.client.say('Something went wrong!')
                 return
@@ -234,7 +229,10 @@ class Player:
                 item = item.lower()
 
                 resources_required = [resource[0] for resource in items_list[item]['cost'].items()]
-                result = dict(await get_user_columns(conn, ctx.message.author, 'inventory', *resources_required))
+                result = dict(await self.client.utils.get_user_columns(conn,
+                                                                       ctx.message.author,
+                                                                       'inventory',
+                                                                       *resources_required))
 
                 inventory = json.loads(result['inventory'])
                 inventory[item] = inventory.get(item, 0) + amount
@@ -244,7 +242,7 @@ class Player:
                     cost[key] = value * -amount
                 cost['inventory'] = (json.dumps(inventory), False)
 
-                result = await set_user_resources(conn, ctx.message.author, cost, user_result=result)
+                result = await self.client.utils.set_user_resources(conn, ctx.message.author, cost, user_result=result)
 
                 if type(result) is str:  # Error
                     await self.client.say(result)
@@ -255,12 +253,12 @@ class Player:
 
     @commands.command(pass_context=True)
     async def daily(self, ctx):
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Alive' not in user_roles:
             return
 
         async with self.client.db.acquire() as conn:
-            result = dict(await get_user_columns(conn, ctx.message.author, 'last_daily', 'food'))
+            result = dict(await self.client.utils.get_user_columns(conn, ctx.message.author, 'last_daily', 'food'))
             if result['last_daily'] is None:
                 result['last_daily'] = datetime.datetime.now() - datetime.timedelta(days=2)
 
@@ -274,15 +272,18 @@ class Player:
                                       f'{minutes} minute{"s" if minutes != 1 else ""} for the next daily pack.')
                 return
 
-            result = await set_resources(conn, ctx.message.author,
-                                         {'food': 24, 'last_daily': (str(datetime.datetime.now()), False)},
-                                         {'food': -24}, user_result=result)
+            result = await self.client.utils.set_resources(
+                conn,
+                ctx.message.author,
+                {'food': 24, 'last_daily': (str(datetime.datetime.now()), False)},
+                {'food': -24},
+                user_result=result
+            )
 
             if type(result) is str:  # Error
                 await self.client.say(result)
             else:
                 await self.client.say('You have redeemed your daily **24** food rations from the camp\'s warehouse.')
-                await update_camp_status(self.client)  # TODO: Do this task only once per min, not on every change!
 
 
 def setup(client):

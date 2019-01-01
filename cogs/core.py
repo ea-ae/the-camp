@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 
 from config import *
-from .utils import get_user_roles
 
 
 class Core:
@@ -15,11 +14,9 @@ class Core:
 
     async def on_ready(self):
         self.client.server = self.client.get_server(SERVER_ID)
+
         for channel in self.client.server.channels:
             self.client.channels[channel.name] = self.client.get_channel(channel.id)
-
-        # events_cog = self.client.get_cog('Events')
-        # await events_cog.configure_scheduler()
 
         await self.client.change_presence(game=discord.Game(name='Survived for 0 days'))
         print(f'Ready!\nUser: {self.client.user.name} ({self.client.user.id})\n'
@@ -93,7 +90,7 @@ class Core:
             member = self.client.server.get_member(ctx.message.author.id)
             await self.client.add_roles(member, status_role, survivor_role)
 
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Alive' in user_roles:
             await self.client.say('You have already joined the camp.')
         elif 'Dead' in user_roles:

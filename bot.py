@@ -5,15 +5,13 @@ import asyncio
 import asyncpg
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 from config import *
-from cogs.utils import update_camp_status
 
 
 description = 'The Camp is a game about surviving together in a post-apocalypse world as long as possible.'
 command_prefix = '!'
-extensions = ['core', 'admin', 'player', 'actions']
+extensions = ['utils', 'core', 'admin', 'player', 'actions']
 
 
 class CampBot(commands.Bot):
@@ -23,6 +21,10 @@ class CampBot(commands.Bot):
         self.loop = kwargs.pop('loop')
         self.server = None
         self.channels = {}
+
+    @property
+    def utils(self):
+        return self.get_cog('Utils')
 
 
 def load_extensions(client):
@@ -54,18 +56,28 @@ if __name__ == '__main__':
     client.remove_command('help')
     load_extensions(client)
 
-    jobstores = {
-        'sql': SQLAlchemyJobStore(url=f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}')
-    }
+    if JOBSTORE == 'redis':
+        from apscheduler.jobstores.redis import RedisJobStore
+        jobstores = {
+            'persistent': RedisJobStore(db=5)
+        }
+    elif JOBSTORE == 'sqlalchemy':
+        from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+        jobstores = {
+            'persistent': SQLAlchemyJobStore(url=f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}')
+        }
+    else:
+        print('WARNING: Unknown jobstore specified!')
+        jobstores = {}
 
     client.scheduler = AsyncIOScheduler(jobstores=jobstores, loop=client.loop)
     client.scheduler.start()
-    client.scheduler.add_job(update_camp_status, 
-                             'interval',  
-                             seconds=30,
-                             args=[client],
-                             id='update_camp_status',
-                             replace_existing=True)
+    # client.scheduler.add_job(update_camp_status,
+    #                          'interval',
+    #                          seconds=30,
+    #                          args=[client],
+    #                          id='update_camp_status',
+    #                          replace_existing=True)
     client.scheduler.print_jobs()
 
     try:

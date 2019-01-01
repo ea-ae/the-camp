@@ -3,8 +3,6 @@ from discord.ext import commands
 import random
 import json
 
-from .utils import get_user_roles, get_user_columns, set_resources, update_camp_status
-
 
 class Player:
     """
@@ -16,40 +14,43 @@ class Player:
 
     @commands.command(pass_context=True)
     async def farm(self, ctx, amount='1'):
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
-        if 'Alive' not in user_roles:
-            return
+        try:
+            user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+            if 'Alive' not in user_roles:
+                return
 
-        if not amount.isdigit():
-            await self.client.say('Invalid command!')
-            return
+            if not amount.isdigit():
+                await self.client.say('Invalid command!')
+                return
 
-        amount = int(amount)
+            amount = int(amount)
 
-        async with self.client.db.acquire() as conn:
-            result = await get_user_columns(conn, ctx.message.author, 'inventory', 'food', 'energy', 'last_energy')
+            async with self.client.db.acquire() as conn:
+                result = await self.client.utils.get_user_columns(conn, ctx.message.author,
+                                                                  'inventory', 'food', 'energy', 'last_energy')
 
-            food = amount
+                food = amount
 
-            inventory = json.loads(result['inventory'])
-            if inventory.get('farmwagon', 0) > 0:
-                food *= 2
+                inventory = json.loads(result['inventory'])
+                if inventory.get('farmwagon', 0) > 0:
+                    food *= 2
 
-            result = await set_resources(conn,
-                                         ctx.message.author,
-                                         {'food': food, 'energy': -amount},
-                                         {'food': food},
-                                         user_result=result)
+                result = await self.client.utils.set_resources(conn, ctx.message.author,
+                                                               {'food': food, 'energy': -amount},
+                                                               {'food': food}, user_result=result)
 
-        if result is True:
-            await self.client.say(
-                f'You earned **{food}** food ration{"s" if food > 1 else ""} for both yourself and the camp.')
-        else:
-            await self.client.say(result)
+            if result is True:
+                await self.client.say(
+                    f'You earned **{food}** food ration{"s" if food > 1 else ""} for both yourself and the camp.')
+            else:
+                await self.client.say(result)
+        except:
+            import traceback
+            traceback.print_exc()
 
     @commands.command(pass_context=True)
     async def mine(self, ctx, amount='1'):
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Alive' not in user_roles:
             return
 
@@ -60,8 +61,8 @@ class Player:
         amount = int(amount)
 
         async with self.client.db.acquire() as conn:
-            result = await get_user_columns(conn, ctx.message.author,
-                                            'inventory', 'materials', 'fuel', 'energy', 'last_energy', 'food')
+            result = await self.client.utils.get_user_columns(conn, ctx.message.author, 'inventory', 'materials',
+                                                              'fuel', 'energy', 'last_energy', 'food')
 
             mats = random.randrange(0, amount + 1)
             fuel = (amount - mats) * 10
@@ -71,11 +72,9 @@ class Player:
                 mats *= 2
                 fuel *= 2
 
-            result = await set_resources(conn,
-                                         ctx.message.author,
-                                         {'materials': mats, 'fuel': fuel, 'energy': -amount},
-                                         {'materials': mats, 'fuel': fuel},
-                                         user_result=result)
+            result = await self.client.utils.set_resources(conn, ctx.message.author,
+                                                           {'materials': mats, 'fuel': fuel, 'energy': -amount},
+                                                           {'materials': mats, 'fuel': fuel}, user_result=result)
 
         if result is True:
             await self.client.say(
@@ -86,7 +85,7 @@ class Player:
 
     @commands.command(pass_context=True)
     async def guard(self, ctx, amount='1', work_type=None):
-        user_roles = await get_user_roles(self.client.server, ctx.message.author)
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Alive' not in user_roles:
             return
 
@@ -97,15 +96,12 @@ class Player:
         amount = int(amount)
 
         if work_type == 'free':
-            result = await set_resources(self.client.db,
-                                         ctx.message.author,
-                                         {'energy': -amount},
-                                         {'defense': amount})
+            result = await self.client.utils.set_resources(self.client.db, ctx.message.author, {'energy': -amount},
+                                                           {'defense': amount})
         else:
-            result = await set_resources(self.client.db,
-                                         ctx.message.author,
-                                         {'scrap': amount, 'energy': -amount},
-                                         {'scrap': -amount, 'defense': amount})
+            result = await self.client.utils.set_resources(self.client.db, ctx.message.author,
+                                                           {'scrap': amount, 'energy': -amount},
+                                                           {'scrap': -amount, 'defense': amount})
 
         if result is True:
             if work_type == 'free':

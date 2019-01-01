@@ -24,4 +24,6 @@ DB_NAME = 'camp'
 DB_USER = 'camp'
 DB_PASSWORD = 'hunter2'
 DB_HOST = '127.0.0.1'
+
+JOBSTORE = 'redis'  # 'redis' / 'sqlalchemy' (pip install sqlalchemy)
 ```
