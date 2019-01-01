@@ -18,6 +18,9 @@ class Core:
         for channel in self.client.server.channels:
             self.client.channels[channel.name] = self.client.get_channel(channel.id)
 
+        self.client.scheduler.start()
+        self.client.scheduler.print_jobs()
+
         await self.client.change_presence(game=discord.Game(name='Survived for 0 days'))
         print(f'Ready!\nUser: {self.client.user.name} ({self.client.user.id})\n'
               f'Server: {self.client.server.name} ({self.client.server.id})')

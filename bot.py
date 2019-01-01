@@ -11,7 +11,7 @@ from config import *
 
 description = 'The Camp is a game about surviving together in a post-apocalypse world as long as possible.'
 command_prefix = '!'
-extensions = ['utils', 'core', 'admin', 'player', 'actions']
+extensions = ['utils', 'core', 'admin', 'events', 'player', 'actions']
 
 
 class CampBot(commands.Bot):
@@ -34,6 +34,12 @@ def load_extensions(client):
             print(f'Loaded extension: {extension}')
         except Exception as e:
             print(f'Failed to load extension "{extension}": {type(e).__name__}\n{e}')
+
+
+async def run_event(event_name, *args):
+    events = client.get_cog('Events')
+    event = getattr(events, event_name)
+    await event(*args)
 
 
 # Run the bot
@@ -71,14 +77,13 @@ if __name__ == '__main__':
         jobstores = {}
 
     client.scheduler = AsyncIOScheduler(jobstores=jobstores, loop=client.loop)
-    client.scheduler.start()
-    # client.scheduler.add_job(update_camp_status,
-    #                          'interval',
-    #                          seconds=30,
-    #                          args=[client],
-    #                          id='update_camp_status',
-    #                          replace_existing=True)
-    client.scheduler.print_jobs()
+
+    client.scheduler.add_job(run_event,
+                             'interval',
+                             seconds=30,
+                             args=['update_camp_status'],
+                             id='update_camp_status',
+                             replace_existing=True)
 
     try:
         print('Logging in...')

@@ -57,6 +57,14 @@ class Admin:
             print(f'Failed to unload extension "{extension}":\n{type(e).__name__}\n{e}')
 
     @commands.command(pass_context=True)
+    async def printjobs(self, ctx):
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
+
+        self.client.scheduler.print_jobs()
+
+    @commands.command(pass_context=True)
     async def say(self, ctx, *, msg):
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
@@ -78,10 +86,12 @@ class Admin:
         print('Updating camp status...')
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' in user_roles:
+
+            events = client.get_cog('Events')
             if reset_data == 'reset':
-                await update_camp_status(self.client, True)
+                await events.update_camp_status(True)
             else:
-                await update_camp_status(self.client)
+                await events.update_camp_status()
 
 
 def setup(client):

@@ -3,6 +3,9 @@ The Camp is a Discord game bot. Your aim is to survive as long as possible, eith
 
 ## Setup
 
+Install the required packages with `pip install -r requirements.txt` and create a valid `config.py` file.
+You will need to run a PostgreSQL database and optionally Redis as well. Create a Discord server with the correct
+text channels and roles, and finally run
 1. Install the required packages with `pip install -r requirements.txt`.
 2. Create the config file
 3. Create the required tables in PostgreSQL (TODO: auto-create them).
