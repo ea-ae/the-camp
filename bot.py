@@ -85,6 +85,14 @@ if __name__ == '__main__':
                              id='update_camp_status',
                              replace_existing=True)
 
+    client.scheduler.add_job(run_event,
+                             'cron',
+                             hour='0,6,12,18',
+                             args=['random_camp_event'],
+                             id='random_camp_event',
+                             jobstore='persistent',
+                             replace_existing=True)
+
     try:
         print('Logging in...')
         loop.run_until_complete(client.login(TOKEN))
@@ -93,6 +101,8 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('KeyboardInterrupt!')
     finally:
+        print('Shutting down scheduler...')
+        client.scheduler.shutdown()
         print('Closing database...')
         loop.run_until_complete(db.close())
         print('Logging out...')

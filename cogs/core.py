@@ -13,14 +13,18 @@ class Core:
         self.client = client
 
     async def on_ready(self):
+        # Get the Server object
         self.client.server = self.client.get_server(SERVER_ID)
 
+        # Create a list of this server's Channel objects
         for channel in self.client.server.channels:
             self.client.channels[channel.name] = self.client.get_channel(channel.id)
 
+        # Start the scheduler
         self.client.scheduler.start()
         self.client.scheduler.print_jobs()
 
+        # Change status message
         await self.client.change_presence(game=discord.Game(name='Survived for 0 days'))
         print(f'Ready!\nUser: {self.client.user.name} ({self.client.user.id})\n'
               f'Server: {self.client.server.name} ({self.client.server.id})')
@@ -35,11 +39,9 @@ class Core:
         if isinstance(error, commands.CommandNotFound):
             await self.client.send_message(ctx.message.channel, 'Unknown command. Type `!help` for a list of commands.')
 
-    @commands.command()
-    async def help(self):
-        # await self.client.say('I don\'t need any help from you right now, but thanks for asking.')
-
-        await self.client.say(
+    @commands.command(pass_context=True)
+    async def help(self, ctx):
+        help_string = (
             '**General Commands**\n'
             '`!help` - Show this list of commands.\n'
             '`!join` - Join a new game.\n'
@@ -53,7 +55,24 @@ class Core:
             '`!farm <amount>` - Work in the farm to earn food rations.\n'
             '`!mine <amount>` - Work in the mine to earn materials and fuel.\n'
             '`!guard <amount>` - Work as a guard to increase camp defenses and earn scrap.\n'
-            '\n*If you are confused about some game mechanic, read the docs channel.*')
+        )
+
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' in user_roles:
+            help_string += (
+                '\n**Admin Commands**\n'
+                '`!shutdown` - Shut down the bot.\n'
+                '`!<reload/load/unload>` - Reload, load, or unload an extension.\n'
+                '`!say <message>` - Make the bot write a message.\n'
+                '`!instaenergy` - Fill your energy.\n'
+                '`!updatecampstatus` - Manually update the camp status message.\n'
+                '`!randomevent` - Manually start a random camp-wide event.\n'
+                '`!printjobs` - Print a list of scheduled jobs in the console.\n'
+            )
+
+        help_string += '\n*If you are confused about some game mechanic, read the docs channel.*'
+
+        await self.client.say(help_string)
 
     @commands.command(pass_context=True)
     async def join(self, ctx):

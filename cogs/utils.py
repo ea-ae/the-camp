@@ -154,6 +154,26 @@ class Utils:
         return status
 
     @staticmethod
+    async def get_camp_resources(db, *args):
+        async def select_rows(conn):
+            try:
+                camp_list = [f'name = \'{name}\'' for name in args]
+                query = f'''SELECT name, value FROM global WHERE {' OR '.join(camp_list)};'''
+
+                return await conn.fetch(query)
+            except Exception as e:
+                print(e)
+                return False
+
+        result = False
+        if type(db) == Pool:
+            async with db.acquire() as c:
+                result = await select_rows(c)
+        elif type(db) == PoolConnectionProxy:
+            result = await select_rows(db)
+        return result
+
+    @staticmethod
     async def set_camp_resources(db, resources, execute_query=True, negative_to_zero=False):
         async def update_data(conn):
             camp_list = [f'name = \'{name}\'' for name in resources.keys()]

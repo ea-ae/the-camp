@@ -57,14 +57,6 @@ class Admin:
             print(f'Failed to unload extension "{extension}":\n{type(e).__name__}\n{e}')
 
     @commands.command(pass_context=True)
-    async def printjobs(self, ctx):
-        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
-        if 'Developer' not in user_roles:
-            return
-
-        self.client.scheduler.print_jobs()
-
-    @commands.command(pass_context=True)
     async def say(self, ctx, *, msg):
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
@@ -83,15 +75,32 @@ class Admin:
         if 'Developer' not in user_roles:
             return
 
-        print('Updating camp status...')
-        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
-        if 'Developer' in user_roles:
+        events = client.get_cog('Events')
+        if reset_data == 'reset':
+            await events.update_camp_status(True)
+        else:
+            await events.update_camp_status()
 
-            events = client.get_cog('Events')
-            if reset_data == 'reset':
-                await events.update_camp_status(True)
-            else:
-                await events.update_camp_status()
+    @commands.command(pass_context=True)
+    async def randomevent(self, ctx):
+        try:
+            user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+            if 'Developer' not in user_roles:
+                return
+
+            events = self.client.get_cog('Events')
+            await events.random_camp_event()
+        except:
+            from traceback import print_exc
+            print_exc()
+
+    @commands.command(pass_context=True)
+    async def printjobs(self, ctx):
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
+
+        self.client.scheduler.print_jobs()
 
 
 def setup(client):
