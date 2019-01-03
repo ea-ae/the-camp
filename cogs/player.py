@@ -101,17 +101,17 @@ class Player:
 
         upgrade_list = {
             'safe': {
-                'cost': [10, 20, 50],
-                'description': 'Protect your belongings from thieves'
-            },
-            'heater': {
-                'cost': [15, 30, 60],
-                'description': 'Conserve fuel when heating your house'
+                'cost': [10, 20, 40],
+                'description': '(30/60/90)% chance to protect your belongings from thieves'
             },
             'reinforcements': {
                 'cost': [25, 50, 100],
-                'description': 'Protect your house from any attacks'
-            }
+                'description': '(20/40/60)% chance to protect your house from bandit attacks'
+            },
+            'recycler': {
+                'cost': [50, 50, 50],
+                'description': 'Convert 10 scrap into 10 materials and spend (3/2/1) energy in the process.'
+            },
         }
 
         if upgrade is None:

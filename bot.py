@@ -87,10 +87,16 @@ if __name__ == '__main__':
 
     client.scheduler.add_job(run_event,
                              'cron',
+                             hour=0,
+                             args=['spend_camp_fuel'],
+                             id='spend_camp_fuel',
+                             replace_existing=True)
+
+    client.scheduler.add_job(run_event,
+                             'cron',
                              hour='0,6,12,18',
                              args=['random_camp_event'],
                              id='random_camp_event',
-                             jobstore='persistent',
                              replace_existing=True)
 
     try:
