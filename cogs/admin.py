@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from .events import Event
+
 
 class Admin:
     """
@@ -12,6 +14,7 @@ class Admin:
 
     @commands.command(pass_context=True, aliases=['sd'])
     async def shutdown(self, ctx):
+        """Shuts down the bot."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
             return
@@ -21,6 +24,7 @@ class Admin:
 
     @commands.command(pass_context=True)
     async def reload(self, ctx, extension):
+        """Reloads an extension."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
             return
@@ -34,6 +38,7 @@ class Admin:
 
     @commands.command(pass_context=True)
     async def load(self, ctx, extension):
+        """Loads an extension."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
             return
@@ -46,6 +51,7 @@ class Admin:
 
     @commands.command(pass_context=True)
     async def unload(self, ctx, extension):
+        """Unloads an extension."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
             return
@@ -58,6 +64,7 @@ class Admin:
 
     @commands.command(pass_context=True)
     async def say(self, ctx, *, msg):
+        """Echoes a message."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
             return
@@ -65,12 +72,14 @@ class Admin:
 
     @commands.command(pass_context=True, aliases=['fillenergy'])
     async def instarest(self, ctx):
+        """Instantly restores a player's energy."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' in user_roles:
             await self.client.utils.set_user_resources(self.client.db, ctx.message.author, {'energy': (12, False)})
 
     @commands.command(pass_context=True)
     async def updatecampstatus(self, ctx, reset_data='noreset'):
+        """Manually updates the camp's status."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
             return
@@ -83,13 +92,32 @@ class Admin:
 
     @commands.command(pass_context=True)
     async def randomevent(self, ctx):
+        """Starts a random event."""
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
+
+        events = self.client.get_cog('Events')
+        await events.random_camp_event()
+
+    @commands.command(pass_context=True)
+    async def event(self, ctx, *, event_name=None):
         try:
+            print(event_name)
+            """Starts an event with a specific name."""
             user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
             if 'Developer' not in user_roles:
                 return
 
-            events = self.client.get_cog('Events')
-            await events.random_camp_event()
+            if event_name is None:
+                event_names = ''
+                for instance in Event.instances:
+                    event_names += f'{instance.title}\n'
+                await self.client.say(event_names)
+            else:
+                for instance in Event.instances:
+                    if instance.title == event_name:
+                        await instance.start_event()
         except:
             from traceback import print_exc
             print_exc()

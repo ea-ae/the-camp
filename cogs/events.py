@@ -174,6 +174,7 @@ class Events:
                                           length=dt.timedelta(hours=6),
                                           start=epidemic_last_chance,
                                           add_to_instances=False)
+                last_chance_event.start_event()
             else:
                 msg = (f'**{title}**\n'
                        f'We stopped the epidemic in time and spent **{pop}** medicine.')
