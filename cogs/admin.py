@@ -80,6 +80,7 @@ class Admin:
         if user_id is None:
             user = ctx.message.author
         else:
+            print(user_id)
             user = await self.client.get_user_info(user_id)
 
         data = {}
@@ -100,37 +101,35 @@ class Admin:
             await events.update_camp_status()
 
     @commands.command(pass_context=True)
-    async def randomevent(self, ctx):
-        """Starts a random event."""
+    async def event(self, ctx, *, event_name=None):
+        """Starts an event with a specific name."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
         if 'Developer' not in user_roles:
             return
 
-        events = self.client.get_cog('Events')
-        await events.random_camp_event()
+        if event_name is None:
+            event_names = ''
+            for instance in Event.instances:
+                event_names += f'{instance.title}\n'
+            await self.client.say(event_names)
+        else:
+            for instance in Event.instances:
+                if instance.title == event_name:
+                    await instance.start_event()
 
     @commands.command(pass_context=True)
-    async def event(self, ctx, *, event_name=None):
-        """Starts a specific event with a given name."""
-        try:
-            print(event_name)
-            """Starts an event with a specific name."""
-            user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
-            if 'Developer' not in user_roles:
-                return
+    async def debug(self, ctx, state):
+        """Turns the debug mode on/off. Debug mode makes events pass instantly."""
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
 
-            if event_name is None:
-                event_names = ''
-                for instance in Event.instances:
-                    event_names += f'{instance.title}\n'
-                await self.client.say(event_names)
-            else:
-                for instance in Event.instances:
-                    if instance.title == event_name:
-                        await instance.start_event()
-        except:
-            from traceback import print_exc
-            print_exc()
+        if state in ('true', 'yes', 'y', 'on', '1'):
+            print('Debug mode turned on!')
+            Event.end_events_immediately = True
+        elif state in ('false', 'no', 'n', 'off', '0'):
+            print('Debug mode turned off!')
+            Event.end_events_immediately = False
 
     @commands.command(pass_context=True)
     async def printjobs(self, ctx):

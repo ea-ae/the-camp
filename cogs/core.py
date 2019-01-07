@@ -64,9 +64,10 @@ class Core:
                 '`!shutdown` - Shut down the bot.\n'
                 '`!<reload/load/unload>` - Reload, load, or unload an extension.\n'
                 '`!say <message>` - Make the bot write a message.\n'
-                '`!instaenergy` - Fill your energy.\n'
+                '`!setdata <name> <value> <user>` - Sets a resource for a player.\n'
                 '`!updatecampstatus` - Manually update the camp status message.\n'
-                '`!randomevent` - Manually start a random camp-wide event.\n'
+                '`!event <name>` - Start an event with a given name.\n'
+                '`!debug <1/0> - Turns debug mode on or off.\n'
                 '`!printjobs` - Print a list of scheduled jobs in the console.\n'
             )
 

@@ -13,6 +13,7 @@ class Events:
     def __init__(self, client):
         self.client = client
         Event.client = client
+        Event.instances = []
         self.create_events()
 
     @staticmethod
@@ -86,7 +87,7 @@ class Events:
                        f'We didn\'t get gather enough fuel in time to power the generator for yet another day. '
                        f'The generator is going to freeze within minutes due to the extreme cold and we won\'t be '
                        f'able to start it up again ever again.\n\nThis is the end for our camp. Farewell.')
-                self.reset_game()
+                await self.reset_game()
             else:
                 msg = (f'**The Generator**\n'
                        f'We have survived for yet another day. We spent **{fuel}** fuel refilling the generator.')
@@ -135,7 +136,7 @@ class Events:
                     msg = (f'**{title}**\n'
                            f'It is too late. We weren\'t able to get enough fuel in time. This is the end for '
                            f'all of us. Farewell.')
-                    self.reset_game()
+                    await Events.reset_game()
                 else:
                     msg = (f'**{title}**\n'
                            f'We have successfully overloaded the generator for **{fuel}** fuel and will hopefully '
@@ -174,12 +175,12 @@ class Events:
                                           length=dt.timedelta(hours=6),
                                           start=epidemic_last_chance,
                                           add_to_instances=False)
-                last_chance_event.start_event()
+                await client.send_message(client.channels['town-hall'], msg)
+                await last_chance_event.start_event()
             else:
                 msg = (f'**{title}**\n'
                        f'We stopped the epidemic in time and spent **{pop}** medicine.')
-
-            await client.send_message(client.channels['town-hall'], msg)
+                await client.send_message(client.channels['town-hall'], msg)
 
         async def epidemic_last_chance(client, title):
             async with client.db.acquire() as conn:
@@ -191,7 +192,7 @@ class Events:
                 msg = (f'**{title}**\n'
                        f'We weren\'t able to stop the epidemic in time. The disease is now spreading too quickly to '
                        f'be stopped. It is the end for our camp.')
-                self.reset_game()
+                await Events.reset_game()
 
             else:
                 msg = (f'**{title}**\n'
@@ -216,6 +217,7 @@ class Event:
     """
     instances = []
     client = None
+    end_events_immediately = False
 
     def __init__(self, **kwargs):
         self.title = kwargs.pop('title')
@@ -227,16 +229,21 @@ class Event:
         if kwargs.get('add_to_instances', True):
             Event.instances.append(self)
 
-    async def start_event(self):
+    async def start_event(self, wait=True):
         """Starts an event and optionally schedules a date for it to end."""
-        event_id = (await self.start(self.client, self.title)).id
+        event_message = await self.start(self.client, self.title)
+
+        if self.end_events_immediately:
+            run_date = dt.datetime.now() + dt.timedelta(seconds=5)
+        else:
+            run_date = dt.datetime.now() + self.length
 
         if self.end is not None:
+            print(run_date)
             self.client.scheduler.add_job(self.end_event,
                                           'date',
-                                          # run_date=dt.datetime.now() + dt.timedelta(minutes=1),  # TEMPORARY!
-                                          run_date=dt.datetime.now() + event.length,
-                                          args=[event_id],
+                                          run_date=run_date,
+                                          args=[event_message.id],
                                           jobstore='persistent')
 
     @classmethod
