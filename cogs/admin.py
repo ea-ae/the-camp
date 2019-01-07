@@ -70,14 +70,23 @@ class Admin:
             return
         await self.client.say(msg)
 
-    @commands.command(pass_context=True, aliases=['fillenergy'])
-    async def instarest(self, ctx):
-        """Instantly restores a player's energy."""
-        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
-        if 'Developer' in user_roles:
-            await self.client.utils.set_user_resources(self.client.db, ctx.message.author, {'energy': (12, False)})
-
     @commands.command(pass_context=True)
+    async def setdata(self, ctx, data_name, data_value, user_id=None):
+        """Sets a column to a given value in the players table."""
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+        if 'Developer' not in user_roles:
+            return
+        
+        if user_id is None:
+            user = ctx.message.author
+        else:
+            user = await self.client.get_user_info(user_id)
+
+        data = {}
+        data[data_name] = (data_value, False)
+        await self.client.utils.set_user_resources(self.client.db, user, data)
+
+    @commands.command(pass_context=True, aliases=['ucs'])
     async def updatecampstatus(self, ctx, reset_data='noreset'):
         """Manually updates the camp's status."""
         user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
@@ -102,6 +111,7 @@ class Admin:
 
     @commands.command(pass_context=True)
     async def event(self, ctx, *, event_name=None):
+        """Starts a specific event with a given name."""
         try:
             print(event_name)
             """Starts an event with a specific name."""
