@@ -14,6 +14,8 @@ class Events:
         self.client = client
         Event.client = client
         Event.instances = []
+
+        self.difficulty = 100
         self.create_events()
 
     @staticmethod
@@ -115,6 +117,33 @@ class Events:
         Event(title='Getting Colder', 
               type='announcement',
               start=getting_colder)
+
+        async def surprise_attack(client, title):
+            attack = random.randint(self.difficulty / 2, self.difficulty)
+            scrap = random.randint(attack / 2, attack * 1.5)
+            result = await client.utils.set_camp_resources(client.db, {'defense': -attack, 'scrap': scrap}, negative_to_zero=True)
+
+            msg = (f'**{title}**\n'
+                   f'A group of bandits has launched a surprise attack against our camp!\n')
+            
+            if result == 'The camp doesn\'t have enough defense.':
+                msg += (f'We weren\'t able to hold them back and they got over our walls. '
+                        f'They raided our warehouse and stole as many of our resources as they could carry. '
+                        f'They also robbed some of our residents out of all their resources.')
+                await client.utils.set_camp_resources(client.db, {'food': randint(attack / 2, attack),
+                                                                  'materials': randint(attack / 2, attack),
+                                                                  'medicine': randint(attack / 4, attack / 2),
+                                                                  'scrap': randint(attack / 2, attack)},
+                                                      negative_to_zero=True)
+            else:
+                msg += (f'Luckily we were able to withstand their attack. We killed some of them and looted '
+                        f'their bodies, earning {scrap} scrap. We lost {attack} defense due to their attack.')
+
+            return await client.send_message(client.channels['town-hall'], msg)
+
+        Event(title='Surprise Attack',
+              type='announcement',
+              start=surprise_attack)
 
         async def blizzard_warning(client, title):
             async with client.db.acquire() as conn:

@@ -92,10 +92,6 @@ class Utils:
 
                 energy_gain = energy - result['energy']
 
-                # print(f'*** energy before: {result["energy"]}')
-                # print(f'*** energy after: {energy}')
-                # print(f'*** energy gain: {energy_gain}')
-
                 result['energy'] += energy_gain
                 if not isinstance(columns['energy'], tuple):  # Do not increase in case of absolute value
                     columns['energy'] += energy_gain
@@ -181,12 +177,15 @@ class Utils:
             query = f'''SELECT name, value FROM global WHERE {' OR '.join(camp_list)};'''
             results = await conn.fetch(query)
 
+            missing_resource = False
             q = ''''''
             for result in results:
                 if resources[result['name']] * -1 > result['value']:  # Would run out of resources
-                    if not negative_to_zero:
+                    if negative_to_zero:  
+                        q += f'''UPDATE global SET value = 0 WHERE name = '{result['name']}';'''
+                        missing_resource = result['name']
+                    else:
                         return f'The camp doesn\'t have enough {result["name"]}.'
-                    q += f'''UPDATE global SET value = 0 WHERE name = '{result['name']}';'''
                 q += f'''UPDATE global SET value = value + {resources[result['name']]} WHERE name = '{result['name']}';'''
 
             if execute_query:
@@ -201,7 +200,10 @@ class Utils:
                     return 'Something went wrong!'
                 else:
                     await tr.commit()
-                    return results
+                    if missing_resource is False
+                        return results
+                    else:    
+                        return f'The camp doesn\'t have enough {missing_resource}.'
             else:
                 return {
                     'query': q
