@@ -200,7 +200,7 @@ class Utils:
                     return 'Something went wrong!'
                 else:
                     await tr.commit()
-                    if missing_resource is False
+                    if missing_resource is False:
                         return results
                     else:    
                         return f'The camp doesn\'t have enough {missing_resource}.'
