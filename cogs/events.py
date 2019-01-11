@@ -15,10 +15,47 @@ class Events:
         Event.client = client
         self.create_events()
 
-    @staticmethod
-    async def reset_game():
-        """Print the game's statistics, reset all game data, and start a new game."""
-        pass  # This will be worked on later
+    @commands.command(pass_context=True)
+    async def reset_game(self, ctx='manual'):
+        """Reset all game data and start a new game."""
+        if type(ctx) is not str:
+            user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+            if 'Developer' not in user_roles:
+                return
+
+        # Create game's table(s) if they don't exist yet
+        q = '''
+            CREATE TABLE IF NOT EXISTS players (
+                user_id varchar(22) UNIQUE,
+                status varchar(10),
+                xp integer DEFAULT 0 NOT NULL,
+                energy integer DEFAULT 12 NOT NULL,
+                food integer DEFAULT 0 NOT NULL,
+                fuel integer DEFAULT 0 NOT NULL,
+                medicine integer DEFAULT 0 NOT NULL,
+                materials integer DEFAULT 0 NOT NULL,
+                scrap integer DEFAULT 0 NOT NULL,
+                inventory text DEFAULT '{}'::text NOT NULL,
+                house_upgrades text DEFAULT '{}'::text NOT NULL,
+                character_upgrades text DEFAULT '{}'::text NOT NULL,
+                last_energy timestamp without time zone DEFAULT now() NOT NULL,
+                till_normal timestamp without time zone,
+                last_crime timestamp without time zone,
+                last_daily timestamp without time zone
+            );
+            CREATE TABLE IF NOT EXISTS global (
+                name varchar(20) UNIQUE,
+                value integer
+            );
+        '''
+        async with self.client.db.acquire() as conn:
+            await conn.execute(q)
+
+        # Create and update camp data
+        events = self.client.get_cog('Events')
+        await events.update_camp_status(reset_camp_data=True)
+
+        print('<--- GAME RESET DONE --->')
 
     async def update_camp_status(self, reset_camp_data=False):
         """Updates the camp's status message in the #camp-status text channel."""

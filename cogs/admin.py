@@ -83,7 +83,7 @@ class Admin:
             print(user_id)
             user = await self.client.get_user_info(user_id)
 
-        data = {}
+        data = dict()
         data[data_name] = (data_value, False)
         await self.client.utils.set_user_resources(self.client.db, user, data)
 

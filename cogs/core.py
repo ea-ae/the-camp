@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import traceback
 
 from config import *
 
@@ -13,6 +14,7 @@ class Core:
         self.client = client
 
     async def on_ready(self):
+        """Called when the bot is ready."""
         # Get the Server object
         self.client.server = self.client.get_server(SERVER_ID)
 
@@ -30,17 +32,22 @@ class Core:
               f'Server: {self.client.server.name} ({self.client.server.id})')
 
     async def on_member_join(self, member):
+        """Called when a new member joins the server."""
         msg = (f'Welcome to **The Camp**, {member.mention}!\n'
                f'Most of the commands related to the game are sent in private messages.\n'
                f'To join the camp, simply type `!join` here.')
         await self.client.send_message(member, msg)
 
     async def on_command_error(self, error, ctx):
+        """Called on errors."""
         if isinstance(error, commands.CommandNotFound):
             await self.client.send_message(ctx.message.channel, 'Unknown command. Type `!help` for a list of commands.')
+        else:
+            traceback.print_exception(type(error), error, error.__traceback__)
 
     @commands.command(pass_context=True)
     async def help(self, ctx):
+        """Sends a help message."""
         help_string = (
             '**General Commands**\n'
             '`!help` - Show this list of commands.\n'
@@ -77,6 +84,7 @@ class Core:
 
     @commands.command(pass_context=True)
     async def join(self, ctx):
+        """Makes a player join the game (creates/sets needed table rows)."""
         async def add_player(alive, new_player, energy):
             """
             Add a player to the camp by wiping his resources and giving him necessary roles.
