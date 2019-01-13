@@ -94,7 +94,7 @@ class Admin:
         if 'Developer' not in user_roles:
             return
 
-        events = client.get_cog('Events')
+        events = self.client.get_cog('Events')
         if reset_data == 'reset':
             await events.update_camp_status(True)
         else:

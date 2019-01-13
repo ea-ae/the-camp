@@ -398,12 +398,11 @@ class Events:
 
                         if result == 'The camp doesn\'t have enough defense.':
                             msg += ('We were not able to withstand their attack and they got into our city. They took '
-                                    'all of our food and set our warehouse on fire, making us lose everything we had.')
-                            await client.utils.set_camp_resources(conn, {'food': (0, False),
-                                                                         'fuel': (0, False),
-                                                                         'medicine': (0, False),
-                                                                         'materials': (0, False),
-                                                                         'scrap': (0, False)})
+                                    'as many resources from our warehouse as they could carry and left.')
+                            await client.utils.set_camp_resources(conn, {'food': -1000,
+                                                                         'medicine': -100,
+                                                                         'scrap': -1000},
+                                                                  negative_to_zero=True)
                         else:
                             msg += ('We were able to withstand their attack, but lost **1000** defense. Soon enough '
                                     'they gave up and left.')

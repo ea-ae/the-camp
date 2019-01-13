@@ -186,7 +186,9 @@ class Utils:
                         missing_resource = result['name']
                     else:
                         return f'The camp doesn\'t have enough {result["name"]}.'
-                q += f'''UPDATE global SET value = value + {resources[result['name']]} WHERE name = '{result['name']}';'''
+                else:
+                    q += (f'''UPDATE global SET value = value + {resources[result['name']]} 
+                          WHERE name = '{result['name']}';''')
 
             if execute_query:
                 tr = conn.transaction()
