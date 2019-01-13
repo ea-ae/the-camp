@@ -5,6 +5,77 @@ import datetime as dt
 import random
 
 
+class Event:
+    """
+    There are three types of events:
+        announcement - an event causes something to happen, no interactivity
+        quest - some requirement must be met in a given amount of time
+        vote - users decide what happens, may have requirements as well
+    """
+    instances = []
+    client = None
+    end_events_immediately = False
+
+    def __init__(self, **kwargs):
+        self.title = kwargs.pop('title')
+        self.type = kwargs.pop('type')
+        self.length = kwargs.get('length', dt.timedelta(hours=12))  # How long the event will run before it ends
+        self.start = kwargs.pop('start')  # Function that is executed when the event starts
+        self.end = kwargs.get('end')  # Optional function that is executed when the event ends
+
+        if self.type == 'vote':
+            self.options = kwargs.pop('options')
+
+        if kwargs.get('add_to_instances', True):
+            Event.instances.append(self)
+
+    async def start_event(self):
+        """Starts an event and optionally schedules a date for it to end."""
+        event_message = await self.start(self.client, self.title)
+
+        if self.type == 'vote':
+            # await self.client.say('1\u20e3 2\u20e3 3\u20e3 4\u20e3 5\u20e3 6\u20e3 7\u20e3 8\u20e3 9\u20e3')
+            for i in range(1, min(10, self.options + 1)):
+                await self.client.add_reaction(event_message, f'{i}\u20e3')
+
+        # Schedule the event to end
+        if self.end is not None:
+            if self.end_events_immediately:
+                run_date = dt.datetime.now() + dt.timedelta(seconds=5)
+            else:
+                run_date = dt.datetime.now() + self.length
+
+            self.client.scheduler.add_job(self.end_event,
+                                          'date',
+                                          run_date=run_date,
+                                          args=[event_message.id],
+                                          jobstore='persistent')
+
+    @classmethod
+    async def end_event(cls, event_id):
+        """Ends an event by executing its end function."""
+        try:
+            message = await cls.client.get_message(cls.client.channels['town-hall'], event_id)
+        except discord.errors.NotFound:
+            print('Can\'t stop event as message was not found!')
+            return False
+
+        title = message.content.split('**')[1]
+
+        for instance in cls.instances:  # Search for an event title with given title
+            if instance.title == title:
+                if instance.type == 'vote':
+                    counts = [reaction.count for reaction in message.reactions]
+                    # await cls.client.clear_reactions(message)
+
+                    top = [i for i, j in enumerate(counts) if j == max(counts)]
+                    choice = random.choice(top)
+
+                    await instance.end(cls.client, instance.title, choice)
+                else:
+                    await instance.end(cls.client, instance.title)
+
+
 class Events:
     """
     Events that are executed by the scheduler.
@@ -140,7 +211,9 @@ class Events:
     def create_events():
         """Creates all the camp events."""
 
-        difficulty = 100
+        difficulty = 100  # Temporary static value
+
+        # Getting Colder
 
         async def getting_colder(client, title):
             await client.utils.set_camp_resources(client.db, {'fuel_use': 1})
@@ -154,6 +227,8 @@ class Events:
         Event(title='Getting Colder', 
               type='announcement',
               start=getting_colder)
+
+        # Surprise Attack
 
         async def surprise_attack(client, title):
             try:
@@ -189,14 +264,16 @@ class Events:
               type='announcement',
               start=surprise_attack)
 
+        # Blizzard Warning
+
         async def blizzard_warning(client, title):
             async with client.db.acquire() as conn:
                 pop = await conn.fetchval('''SELECT COUNT(user_id) FROM players WHERE status = 'normal';''')
 
             msg = (f'**{title}**\n'
-                   f'Our systems have detected that a blizzard is coming in the next 24 hours. We will have to temporarily '
-                   f'overload the generator in order to survive, and that\'ll require somewhere between **{pop * 5}** and '
-                   f'**{pop * 12}** fuel, depending on the strength of the storm.\n')
+                   f'Our systems have detected that a blizzard is coming in the next 24 hours. We will have to '
+                   f'temporarily overload the generator in order to survive, and that\'ll require somewhere between '
+                   f'**{pop * 5}** and **{pop * 12}** fuel, depending on the strength of the storm.\n')
             return await client.send_message(client.channels['town-hall'], msg)
 
         async def blizzard_warning_end(client, title):
@@ -222,6 +299,8 @@ class Events:
               length=dt.timedelta(hours=24),
               start=blizzard_warning, 
               end=blizzard_warning_end)
+
+        # The Epidemic
 
         async def epidemic(client, title):
             msg = (f'**{title}**\n'
@@ -280,71 +359,65 @@ class Events:
               start=epidemic,
               end=epidemic_end)
 
-        async def paid_protection(client, title):
-            pass
+        # Paid Protection
 
-        async def paid_protection_end(client, title):
-            pass
+        async def paid_protection(client, title):
+            msg = (f'**{title}**\n'
+                   f'A group of mercenaries have offered their services to us. They said that they are temporarily '
+                   f'passing by and ran out of food. They offered to protect us from any bandit attacks '
+                   f'(giving us **1000** defense points) if we give them **500** food rations. We have to make a '
+                   f'decision in six hours. What should we do?\n'
+                   f'1\u20e3 Agree and give them 500 food rations.\n'
+                   f'2\u20e3 Decline their offer.')
+
+            return await client.send_message(client.channels['town-hall'], msg)
+
+        async def paid_protection_end(client, title, choice):
+            async with client.db.acquire() as conn:
+                msg = f'**{title}**\n'
+                food = dict(await client.utils.get_camp_resources(conn, 'food'))['food']
+
+                if choice == 0 and food >= 500:
+                    msg += 'We agreed with their offer and paid them **500** food rations. '
+                    if random.random() > 0.5:
+                        msg += 'The mercenaries honored their part of the deal and we received **1000** defense.'
+                        await client.utils.set_camp_resources(conn, {'food': -500, 'defense': 1000})
+                    else:
+                        msg += 'Suddenly, the supposed mercenaries disappeared with the food and never came back.'
+                        await client.utils.set_camp_resources(conn, {'food': -500})
+                else:
+                    if food >= 500:
+                        msg += 'We decided to decline their offer. '
+                    else:
+                        msg += ('We decided to decline their offer and told them we did not have enough food to '
+                                'pay them. ')
+
+                    if random.random() > 0.75:
+                        msg += 'The mercenaries were not happy to hear that. Desperate for food, they attacked us. '
+                        result = await client.utils.set_camp_resources(conn, {'defense': -1000})
+
+                        if result == 'The camp doesn\'t have enough defense.':
+                            msg += ('We were not able to withstand their attack and they got into our city. They took '
+                                    'all of our food and set our warehouse on fire, making us lose everything we had.')
+                            await client.utils.set_camp_resources(conn, {'food': (0, False),
+                                                                         'fuel': (0, False),
+                                                                         'medicine': (0, False),
+                                                                         'materials': (0, False),
+                                                                         'scrap': (0, False)})
+                        else:
+                            msg += ('We were able to withstand their attack, but lost **1000** defense. Soon enough '
+                                    'they gave up and left.')
+                    else:
+                        msg += 'The mercenaries left in disappointment and we never saw them again.'
+
+            await client.send_message(client.channels['town-hall'], msg)
 
         Event(title='Paid Protection',
               type='vote',
+              options=2,
               length=dt.timedelta(hours=6),
               start=paid_protection,
               end=paid_protection_end)
-
-
-class Event:
-    """
-    There are three types of events:
-        announcement - an event causes something to happen, no interactivity
-        quest - some requirement must be met in a given amount of time
-        vote - users decide what happens, may have requirements as well
-    """
-    instances = []
-    client = None
-    end_events_immediately = False
-
-    def __init__(self, **kwargs):
-        self.title = kwargs.pop('title')
-        self.type = kwargs.pop('type')
-        self.length = kwargs.get('length', dt.timedelta(hours=12))  # How long the event will run before it ends
-        self.start = kwargs.pop('start')  # Function that is executed when the event starts
-        self.end = kwargs.get('end')  # Optional function that is executed when the event ends
-
-        if kwargs.get('add_to_instances', True):
-            Event.instances.append(self)
-
-    async def start_event(self):
-        """Starts an event and optionally schedules a date for it to end."""
-        event_message = await self.start(self.client, self.title)
-
-        if self.end_events_immediately:
-            run_date = dt.datetime.now() + dt.timedelta(seconds=5)
-        else:
-            run_date = dt.datetime.now() + self.length
-
-        if self.end is not None:
-            print(run_date)
-            self.client.scheduler.add_job(self.end_event,
-                                          'date',
-                                          run_date=run_date,
-                                          args=[event_message.id],
-                                          jobstore='persistent')
-
-    @classmethod
-    async def end_event(cls, event_id):
-        """Ends an event by executing its end function."""
-        try:
-            message = await cls.client.get_message(cls.client.channels['town-hall'], event_id)
-        except discord.errors.NotFound:
-            print('Can\'t stop event as message was not found!')
-            return False
-
-        title = message.content.split('**')[1]
-
-        for instance in cls.instances:  # Search for an event title with given title
-            if instance.title == title:
-                await instance.end(cls.client, instance.title)
 
 
 def setup(client):

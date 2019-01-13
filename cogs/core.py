@@ -74,7 +74,7 @@ class Core:
                 '`!setdata <name> <value> <user>` - Sets a resource for a player.\n'
                 '`!updatecampstatus` - Manually update the camp status message.\n'
                 '`!event <name>` - Start an event with a given name.\n'
-                '`!debug <1/0> - Turns debug mode on or off.\n'
+                '`!debug <1/0>` - Turns debug mode on or off.\n'
                 '`!printjobs` - Print a list of scheduled jobs in the console.\n'
             )
 
@@ -86,10 +86,7 @@ class Core:
     async def join(self, ctx):
         """Makes a player join the game (creates/sets needed table rows)."""
         async def add_player(alive, new_player, energy):
-            """
-            Add a player to the camp by wiping his resources and giving him necessary roles.
-            """
-
+            """Add a player to the camp by wiping his resources and giving him necessary roles."""
             tr = conn.transaction()
             await tr.start()
 
