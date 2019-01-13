@@ -35,7 +35,7 @@ class Utils:
     @classmethod
     async def set_resources(cls, db, user, columns, resources, user_result=None, negative_to_zero=False):
         async def run_queries(conn):
-            camp_query = await cls.set_camp_resources(conn, resources, False, negative_to_zero)
+            camp_query = await cls.set_camp_data(conn, resources, False, negative_to_zero)
             if type(camp_query) is str:  # Error
                 return camp_query
 
@@ -150,7 +150,7 @@ class Utils:
         return status
 
     @staticmethod
-    async def get_camp_resources(db, *args):
+    async def get_camp_data(db, *args):
         async def select_rows(conn):
             try:
                 camp_list = [f'name = \'{name}\'' for name in args]
@@ -170,7 +170,7 @@ class Utils:
         return result
 
     @staticmethod
-    async def set_camp_resources(db, resources, execute_query=True, negative_to_zero=False):
+    async def set_camp_data(db, resources, execute_query=True, negative_to_zero=False):
         async def update_data(conn):
             camp_list = [f'name = \'{name}\'' for name in resources.keys()]
 

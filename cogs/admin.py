@@ -80,7 +80,6 @@ class Admin:
         if user_id is None:
             user = ctx.message.author
         else:
-            print(user_id)
             user = await self.client.get_user_info(user_id)
 
         data = dict()

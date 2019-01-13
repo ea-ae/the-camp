@@ -1,8 +1,9 @@
 import discord
 from discord.ext import commands
-
 import datetime as dt
 import random
+
+from . import camp_events
 
 
 class Event:
@@ -185,9 +186,9 @@ class Events:
         """Removes a specified amount of fuel out of the camp's warehouse once a day."""
         async with self.client.db.acquire() as conn:
             pop = await conn.fetchval('''SELECT COUNT(user_id) FROM players WHERE status = 'normal';''')
-            fuel_use = (await self.client.utils.get_camp_resources(conn, 'fuel_use'))[0]['value']
+            fuel_use = (await self.client.utils.get_camp_data(conn, 'fuel_use'))[0]['value']
             fuel = pop * fuel_use
-            result = await self.client.utils.set_camp_resources(conn, {'fuel': -fuel})
+            result = await self.client.utils.set_camp_data(conn, {'fuel': -fuel})
 
             if result == 'The camp doesn\'t have enough fuel.':
                 msg = (f'**The Generator**\n'
@@ -211,212 +212,11 @@ class Events:
     def create_events():
         """Creates all the camp events."""
 
-        difficulty = 100  # Temporary static value
-
-        # Getting Colder
-
-        async def getting_colder(client, title):
-            await client.utils.set_camp_resources(client.db, {'fuel_use': 1})
-
-            msg = (f'**{title}**\n'
-                   f'The average temperature has dropped yet again. We have adjusted the generator and will have to '
-                   f'use 1 more fuel per resident.')
-
-            return await client.send_message(client.channels['town-hall'], msg)
-
-        Event(title='Getting Colder', 
-              type='announcement',
-              start=getting_colder)
-
-        # Surprise Attack
-
-        async def surprise_attack(client, title):
-            try:
-                attack = random.randint(int(difficulty / 2), difficulty)
-                scrap = random.randint(int(attack / 2), int(attack * 1.5))
-                result = await client.utils.set_camp_resources(client.db,
-                                                               {'defense': -attack, 'scrap': scrap},
-                                                               negative_to_zero=True)
-
-                msg = (f'**{title}**\n'
-                       f'A group of bandits has launched a surprise attack against our camp!\n')
-
-                if result == 'The camp doesn\'t have enough defense.':
-                    msg += (f'We weren\'t able to hold them back and they got over our walls. '
-                            f'They raided our warehouse and stole as many of our resources as they could carry. '
-                            f'They also robbed some of our residents out of all their resources.')
-                    await client.utils.set_camp_resources(client.db,
-                                                          {'food': randint(int(attack / 2), attack),
-                                                           'materials': randint(int(attack / 2), attack),
-                                                           'medicine': randint(int(attack / 4), int(attack / 2)),
-                                                           'scrap': randint(int(attack / 2), attack)},
-                                                          negative_to_zero=True)
-                else:
-                    msg += (f'Luckily we were able to withstand their attack. We killed some of them and looted their '
-                            f'bodies, earning **{scrap}** scrap. We lost **{attack}** defense due to their attack.')
-
-                return await client.send_message(client.channels['town-hall'], msg)
-            except:
-                import traceback
-                traceback.print_exc()
-
-        Event(title='Surprise Attack',
-              type='announcement',
-              start=surprise_attack)
-
-        # Blizzard Warning
-
-        async def blizzard_warning(client, title):
-            async with client.db.acquire() as conn:
-                pop = await conn.fetchval('''SELECT COUNT(user_id) FROM players WHERE status = 'normal';''')
-
-            msg = (f'**{title}**\n'
-                   f'Our systems have detected that a blizzard is coming in the next 24 hours. We will have to '
-                   f'temporarily overload the generator in order to survive, and that\'ll require somewhere between '
-                   f'**{pop * 5}** and **{pop * 12}** fuel, depending on the strength of the storm.\n')
-            return await client.send_message(client.channels['town-hall'], msg)
-
-        async def blizzard_warning_end(client, title):
-            async with client.db.acquire() as conn:
-                pop = await conn.fetchval('''SELECT COUNT(user_id) FROM players WHERE status = 'normal';''')
-                fuel = pop * random.randint(5, 12)
-                result = await client.utils.set_camp_resources(conn, {'fuel': -fuel})
-
-                if result == 'The camp doesn\'t have enough fuel.':
-                    msg = (f'**{title}**\n'
-                           f'It is too late. We weren\'t able to get enough fuel in time. This is the end for '
-                           f'all of us. Farewell.')
-                    await Events.reset_game()
-                else:
-                    msg = (f'**{title}**\n'
-                           f'We have successfully overloaded the generator for **{fuel}** fuel and will hopefully '
-                           f'survive the blizzard.')
-
-            return await client.send_message(client.channels['town-hall'], msg)
-
-        Event(title='Blizzard Warning', 
-              type='quest',
-              length=dt.timedelta(hours=24),
-              start=blizzard_warning, 
-              end=blizzard_warning_end)
-
-        # The Epidemic
-
-        async def epidemic(client, title):
-            msg = (f'**{title}**\n'
-                   f'There is an epidemic in our camp. A highly fatal disease in spreading at rapid speeds '
-                   f'and has already taken multiple lives. We must stop it before it is too late. If we do not '
-                   f'gather 1 medicine for every resident of our camp within 18 hours, things will get much worse.')
-
-            return await client.send_message(client.channels['town-hall'], msg)
-
-        async def epidemic_end(client, title):
-            async with client.db.acquire() as conn:
-                pop = await conn.fetchval('''SELECT COUNT(user_id) FROM players WHERE status = 'normal';''')
-                result = await client.utils.set_camp_resources(conn, {'medicine': -pop})
-
-            if result == 'The camp doesn\'t have enough medicine.':
-                msg = (f'**{title}**\n'
-                       f'We do not have enough medical supplies to stop the epidemic! Things are even more serious '
-                       f'now. The disease is spreading even quicker and before, and if we do not stop it in the '
-                       f'next 6 hours, then it will be too late. We now need 2 medicine per resident to stop the '
-                       f'epidemic.')
-
-                last_chance_event = Event(title='The Epidemic',
-                                          type='announcement',
-                                          length=dt.timedelta(hours=6),
-                                          start=epidemic_last_chance,
-                                          add_to_instances=False)
-                await client.send_message(client.channels['town-hall'], msg)
-                await last_chance_event.start_event()
-            else:
-                msg = (f'**{title}**\n'
-                       f'We stopped the epidemic in time and spent **{pop}** medicine.')
-                await client.send_message(client.channels['town-hall'], msg)
-
-        async def epidemic_last_chance(client, title):
-            async with client.db.acquire() as conn:
-                pop = await conn.fetchval('''SELECT COUNT(user_id) FROM players WHERE status = 'normal';''')
-                medicine = pop * 2
-                result = await client.utils.set_camp_resources(conn, {'medicine': -medicine})
-
-            if result == 'The camp doesn\'t have enough medicine.':
-                msg = (f'**{title}**\n'
-                       f'We weren\'t able to stop the epidemic in time. The disease is now spreading too quickly to '
-                       f'be stopped. It is the end for our camp.')
-                await Events.reset_game()
-
-            else:
-                msg = (f'**{title}**\n'
-                       f'We suffered many losses and barely didn\'t make it, but the disease has been eradicated. '
-                       f'We had to spend **{medicine}** medicine.')
-
-            await client.send_message(client.channels['town-hall'], msg)
-
-        Event(title='The Epidemic',
-              type='quest',
-              length=dt.timedelta(hours=18),
-              start=epidemic,
-              end=epidemic_end)
-
-        # Paid Protection
-
-        async def paid_protection(client, title):
-            msg = (f'**{title}**\n'
-                   f'A group of mercenaries have offered their services to us. They said that they are temporarily '
-                   f'passing by and ran out of food. They offered to protect us from any bandit attacks '
-                   f'(giving us **1000** defense points) if we give them **500** food rations. We have to make a '
-                   f'decision in six hours. What should we do?\n'
-                   f'1\u20e3 Agree and give them 500 food rations.\n'
-                   f'2\u20e3 Decline their offer.')
-
-            return await client.send_message(client.channels['town-hall'], msg)
-
-        async def paid_protection_end(client, title, choice):
-            async with client.db.acquire() as conn:
-                msg = f'**{title}**\n'
-                food = dict(await client.utils.get_camp_resources(conn, 'food'))['food']
-
-                if choice == 0 and food >= 500:
-                    msg += 'We agreed with their offer and paid them **500** food rations. '
-                    if random.random() > 0.5:
-                        msg += 'The mercenaries honored their part of the deal and we received **1000** defense.'
-                        await client.utils.set_camp_resources(conn, {'food': -500, 'defense': 1000})
-                    else:
-                        msg += 'Suddenly, the supposed mercenaries disappeared with the food and never came back.'
-                        await client.utils.set_camp_resources(conn, {'food': -500})
-                else:
-                    if food >= 500:
-                        msg += 'We decided to decline their offer. '
-                    else:
-                        msg += ('We decided to decline their offer and told them we did not have enough food to '
-                                'pay them. ')
-
-                    if random.random() > 0.75:
-                        msg += 'The mercenaries were not happy to hear that. Desperate for food, they attacked us. '
-                        result = await client.utils.set_camp_resources(conn, {'defense': -1000})
-
-                        if result == 'The camp doesn\'t have enough defense.':
-                            msg += ('We were not able to withstand their attack and they got into our city. They took '
-                                    'as many resources from our warehouse as they could carry and left.')
-                            await client.utils.set_camp_resources(conn, {'food': -1000,
-                                                                         'medicine': -100,
-                                                                         'scrap': -1000},
-                                                                  negative_to_zero=True)
-                        else:
-                            msg += ('We were able to withstand their attack, but lost **1000** defense. Soon enough '
-                                    'they gave up and left.')
-                    else:
-                        msg += 'The mercenaries left in disappointment and we never saw them again.'
-
-            await client.send_message(client.channels['town-hall'], msg)
-
-        Event(title='Paid Protection',
-              type='vote',
-              options=2,
-              length=dt.timedelta(hours=6),
-              start=paid_protection,
-              end=paid_protection_end)
+        camp_events.blizzard_warning.add_event()
+        camp_events.epidemic.add_event()
+        camp_events.getting_colder.add_event()
+        camp_events.paid_protection.add_event()
+        camp_events.surprise_attack.add_event()
 
 
 def setup(client):

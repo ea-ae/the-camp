@@ -14,39 +14,35 @@ class Player:
 
     @commands.command(pass_context=True)
     async def farm(self, ctx, amount='1'):
-        try:
-            user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
-            if 'Alive' not in user_roles:
-                return
+        user_roles = await self.client.utils.get_user_roles(self.client.server, ctx.message.author)
+        if 'Alive' not in user_roles:
+            return
 
-            if not amount.isdigit():
-                await self.client.say('Invalid command!')
-                return
+        if not amount.isdigit():
+            await self.client.say('Invalid command!')
+            return
 
-            amount = int(amount)
+        amount = int(amount)
 
-            async with self.client.db.acquire() as conn:
-                result = await self.client.utils.get_user_columns(conn, ctx.message.author,
-                                                                  'inventory', 'food', 'energy', 'last_energy')
+        async with self.client.db.acquire() as conn:
+            result = await self.client.utils.get_user_columns(conn, ctx.message.author,
+                                                              'inventory', 'food', 'energy', 'last_energy')
 
-                food = amount
+            food = amount
 
-                inventory = json.loads(result['inventory'])
-                if inventory.get('farmwagon', 0) > 0:
-                    food *= 2
+            inventory = json.loads(result['inventory'])
+            if inventory.get('farmwagon', 0) > 0:
+                food *= 2
 
-                result = await self.client.utils.set_resources(conn, ctx.message.author,
-                                                               {'food': food, 'energy': -amount},
-                                                               {'food': food}, user_result=result)
+            result = await self.client.utils.set_resources(conn, ctx.message.author,
+                                                           {'food': food, 'energy': -amount},
+                                                           {'food': food}, user_result=result)
 
-            if result is True:
-                await self.client.say(
-                    f'You earned **{food}** food ration{"s" if food > 1 else ""} for both yourself and the camp.')
-            else:
-                await self.client.say(result)
-        except:
-            import traceback
-            traceback.print_exc()
+        if result is True:
+            await self.client.say(
+                f'You earned **{food}** food ration{"s" if food > 1 else ""} for both yourself and the camp.')
+        else:
+            await self.client.say(result)
 
     @commands.command(pass_context=True)
     async def mine(self, ctx, amount='1'):
