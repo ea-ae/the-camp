@@ -62,4 +62,3 @@ def add_event():
                  length=dt.timedelta(hours=6),
                  start=paid_protection,
                  end=paid_protection_end)
-

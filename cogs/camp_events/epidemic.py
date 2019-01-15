@@ -46,7 +46,9 @@ async def epidemic_last_chance(client, title):
         msg = (f'**{title}**\n'
                f'We weren\'t able to stop the epidemic in time. The disease is now spreading too quickly to '
                f'be stopped. It is the end for our camp.')
-        await Events.reset_game()
+        
+        events = client.get_cog('Events')
+        await events.reset_game()
 
     else:
         msg = (f'**{title}**\n'

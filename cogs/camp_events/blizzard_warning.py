@@ -24,7 +24,9 @@ async def blizzard_warning_end(client, title):
             msg = (f'**{title}**\n'
                    f'It is too late. We weren\'t able to get enough fuel in time. This is the end for '
                    f'all of us. Farewell.')
-            await Events.reset_game()
+                   
+            events = client.get_cog('Events')
+            await events.reset_game()
         else:
             msg = (f'**{title}**\n'
                    f'We have successfully overloaded the generator for **{fuel}** fuel and will hopefully '
