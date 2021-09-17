@@ -23,3 +23,7 @@ DB_HOST = '127.0.0.1'
 
 JOBSTORE = 'redis'  # 'redis' / 'sqlalchemy' (pip install sqlalchemy)
 ```
+
+## About
+
+Created as a personal learn-by-doing project in 2018-2019.
